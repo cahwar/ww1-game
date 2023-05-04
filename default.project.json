@@ -1,0 +1,33 @@
+{
+  "name": "ww1",
+  "tree": {
+    "$ignoreUnknownInstances": true,
+    "$className": "DataModel",
+    
+    "ReplicatedStorage": {
+      "Common": {
+        "$path": "src/ReplicatedStorage",
+        "Packages": {
+          "$path": "Packages"
+        }
+      }
+    },
+
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/ServerScriptService",
+        "StateSystem": {
+          "$path": "StateSystem"
+        }
+      }
+    },
+
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/StarterPlayerScripts"
+        }
+      }
+    }
+  }
+}
