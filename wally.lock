@@ -70,4 +70,4 @@ dependencies = []
 [[package]]
 name = "user/ww1"
 version = "0.1.0"
-dependencies = [["Comm", "sleitnick/comm@0.3.1"], ["Component", "sleitnick/component@2.4.6"], ["Concur", "sleitnick/concur@0.1.2"], ["EnumList", "sleitnick/enum-list@2.0.1"], ["Signal", "sleitnick/signal@1.5.0"], ["TableUtil", "sleitnick/table-util@1.2.0"], ["Timer", "sleitnick/timer@1.1.2"], ["Trove", "sleitnick/trove@0.5.0"], ["knit", "sleitnick/knit@1.5.1"]]
+dependencies = [["Comm", "sleitnick/comm@0.3.1"], ["Component", "sleitnick/component@2.4.6"], ["Concur", "sleitnick/concur@0.1.2"], ["EnumList", "sleitnick/enum-list@2.0.1"], ["Knit", "sleitnick/knit@1.5.1"], ["Promise", "evaera/promise@4.0.0"], ["Signal", "sleitnick/signal@1.5.0"], ["TableUtil", "sleitnick/table-util@1.2.0"], ["Timer", "sleitnick/timer@1.1.2"], ["Trove", "sleitnick/trove@0.5.0"]]
