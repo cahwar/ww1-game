@@ -4,32 +4,53 @@ local RunService = game:GetService("RunService")
 local Trove = require(ReplicatedStorage.Common.Packages.Trove)
 local Methods = require(ReplicatedStorage.Common.Modules.Methods)
 local Promise = require(ReplicatedStorage.Common.Packages.Promise)
+local EnumList = require(ReplicatedStorage.Common.Packages.EnumList)
+
+local TriWaveType = EnumList.new("TriWaveType", {
+	"Dynamic",
+	"Static",
+})
 
 local TriWave = {}
 TriWave.__index = TriWave
 
 export type TriWaveCalculations = { SinSpeed: number, SinHeight: number, CosSpeed: number, CosHeight: number }
 
-function TriWave.new(calculations: TriWaveCalculations)
+function TriWave._new()
 	local self = setmetatable({
 		trove = Trove.new(),
 		actions = {},
 
 		heightMultiplers = { sin = 1, cos = 1 },
 		intensityMultiplers = { sin = 1, cos = 1 },
-		calculations = calculations,
 	}, TriWave)
 	return self
 end
 
+function TriWave.fromDynamicCalculations(calculationFunction: () -> TriWaveCalculations)
+	local self = TriWave._new()
+	self.calculationFunction = calculationFunction
+	self.triWaveType = TriWaveType.Dynamic
+	return self
+end
+
+function TriWave.fromStaticCalculations(calculations: TriWaveCalculations)
+	local self = TriWave._new()
+	self.calculations = calculations
+	self.triWaveType = TriWaveType.Static
+	return self
+end
+
 function TriWave:_GetSinWave()
-	return math.sin(tick() * (self.calculations.SinSpeed * self.intensityMultiplers.sin))
-		* (self.calculations.SinHeight * self.heightMultiplers.sin)
+	local calculations = self.triWaveType == TriWaveType.Dynamic and self.calculationFunction() or self.calculations
+	return math.sin(tick() * (calculations.SinSpeed * self.intensityMultiplers.sin))
+		* (calculations.SinHeight * self.heightMultiplers.sin)
 end
 
 function TriWave:_GetCosWave()
-	return math.cos(tick() * (self.calculations.CosSpeed * self.intensityMultiplers.cos))
-		* (self.calculations.CosHeight * self.heightMultiplers.cos)
+	local calculations = self.triWaveType == TriWaveType.Dynamic and self.calculationFunction() or self.calculations
+	return math.cos(tick() * (calculations.CosSpeed * self.intensityMultiplers.cos))
+		* (calculations.CosHeight * self.heightMultiplers.cos)
 end
 
 function TriWave:ConnectAction(action: (number, number) -> nil)

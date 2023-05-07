@@ -33,12 +33,15 @@ function CameraShake:_GetAngle(sinWave: number, cosWave: number)
 	return CFrame.Angles(sinWave, cosWave, 0)
 end
 
-function CameraShake.new(calculations: TriWave.TriWaveCalculations, shakeOptions: ShakeOptions)
+function CameraShake._new(shakeOptions: ShakeOptions)
 	local self = setmetatable({
-		triWave = TriWave.new(calculations),
 		shakeOptions = shakeOptions,
 	}, CameraShake)
 
+	return self
+end
+
+function CameraShake:_StartShake()
 	self.triWave:ConnectAction(function(sinWave: number, cosWave: number)
 		sinWave = math.rad(sinWave / 10)
 		cosWave = math.rad(cosWave / 10)
@@ -46,7 +49,22 @@ function CameraShake.new(calculations: TriWave.TriWaveCalculations, shakeOptions
 	end)
 
 	self.triWave:StartRenderStepped()
+end
 
+function CameraShake.fromDynamicCalculations(
+	shakeOptions: ShakeOptions,
+	calculationFunction: () -> TriWave.TriWaveCalculations
+)
+	local self = CameraShake._new(shakeOptions)
+	self.triWave = TriWave.fromDynamicCalculations(calculationFunction)
+	self:_StartShake()
+	return self
+end
+
+function CameraShake.fromStaticCalculations(shakeOptions: ShakeOptions, calculations: TriWave.TriWaveCalculations)
+	local self = CameraShake._new(shakeOptions)
+	self.triWave = TriWave.fromStaticCalculations(calculations)
+	self:_StartShake()
 	return self
 end
 
