@@ -2,6 +2,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local TriWave = require(ReplicatedStorage.Common.Classes.TriWave)
 
+local Camera = workspace.CurrentCamera
+
 local CameraShake = {}
 CameraShake.__index = CameraShake
 
@@ -10,16 +12,15 @@ function CameraShake.new(calculations: TriWave.TriWaveCalculations)
 		triWave = TriWave.new(calculations),
 	}, CameraShake)
 
-	local camera = workspace.CurrentCamera
-
 	self.triWave:ConnectAction(function(sinWave: number, cosWave: number)
-		sinWave /= math.rad(sinWave / 10)
-		cosWave /= math.rad(cosWave / 10)
-		local angles = CFrame.Angles(sinWave, 0, cosWave)
-		camera.CFrame = camera.CFrame * angles
+		sinWave = math.rad(sinWave / 10)
+		cosWave = math.rad(cosWave / 10)
+
+		local angle = CFrame.Angles(sinWave, 0, cosWave)
+		Camera.CFrame = Camera.CFrame * angle
 	end)
 
-	self.triWave:Start()
+	self.triWave:StartRenderStepped()
 
 	return self
 end

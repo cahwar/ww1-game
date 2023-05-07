@@ -41,14 +41,35 @@ function TriWave:DisconnectAction(actionId: number)
 	self.actions[actionId] = nil
 end
 
-function TriWave:Start()
-	self.trove:Connect(RunService.Heartbeat, function()
-		self.SinWave = self:_GetSinWave()
-		self.CosWave = self:_GetCosWave()
+function TriWave:_BaseStart()
+	if self.Started then
+		warn("TriWave has already been started\n Stopping")
+		self.processTrove:Destroy()
+	end
 
-		for _, v in self.actions do
-			v(self.SinWave, self.CosWave)
-		end
+	self.processTrove = self.trove:Extend()
+end
+
+function TriWave:_ProcessAction()
+	self.SinWave = self:_GetSinWave()
+	self.CosWave = self:_GetCosWave()
+
+	for _, v in self.actions do
+		v(self.SinWave, self.CosWave)
+	end
+end
+
+function TriWave:StartHeartbeat()
+	self:_BaseStart()
+	self.processTrove:Connect(RunService.Heartbeat, function()
+		self:_ProcessAction()
+	end)
+end
+
+function TriWave:StartRenderStepped()
+	self:_BaseStart()
+	self.processTrove:Connect(RunService.RenderStepped, function()
+		self:_ProcessAction()
 	end)
 end
 
