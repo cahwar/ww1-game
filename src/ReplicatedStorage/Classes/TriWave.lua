@@ -3,6 +3,7 @@ local RunService = game:GetService("RunService")
 
 local Trove = require(ReplicatedStorage.Common.Packages.Trove)
 local Methods = require(ReplicatedStorage.Common.Modules.Methods)
+local Promise = require(ReplicatedStorage.Common.Packages.Promise)
 
 local TriWave = {}
 TriWave.__index = TriWave
@@ -79,12 +80,15 @@ function TriWave:DestroySmoothly(stopDuration: number)
 		stopDuration = 0.4
 	end
 
-	Methods.StartLerpAction(self.heightMultiplers.sin, 0, stopDuration, function(step: number)
+	local sinStopPromise = Methods.StartLerpAction(self.heightMultiplers.sin, 0, stopDuration, function(step: number)
 		self.heightMultiplers.sin = step
 	end).Promise
-		:await()
 
-	self:Destroy()
+	local cosStopPromise = Methods.StartLerpAction(self.heightMultiplers.cos, 0, stopDuration, function(step: number)
+		self.heightMultiplers.cos = step
+	end).Promise
+
+	Promise.allSettled({ sinStopPromise, cosStopPromise }):andThenCall(self.Destroy, self)
 end
 
 function TriWave:Destroy()
