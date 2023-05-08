@@ -47,6 +47,12 @@ end
 function CameraController:EnableDefaultCameraShake()
 	self.defaultCameraShakeTrove = self.trove:Extend()
 
+	self.defaultCameraShakeTrove:Add(function()
+		if self.defaultCameraShake then
+			self.defaultCameraShake:DestroySmoothly(0.5)
+		end
+	end)
+
 	self.defaultCameraShake = CameraShake.fromDynamicCalculations(
 		{ RotationAxis = CameraShake.RotationAxis.XZ },
 		function()
@@ -139,7 +145,7 @@ function CameraController:KnitInit()
 	end)
 
 	self.ClientController.HumanoidDied:Connect(function()
-		self:StopContrller()
+		self:StopController()
 	end)
 end
 
