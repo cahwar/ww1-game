@@ -8,4 +8,8 @@ function Methods.StartLerpAction(startValue: number, finalValue: number, lerpDur
 	return LerpAction.new(startValue, finalValue, lerpDuration, action)
 end
 
+function Methods.LerpValue(valueA, valueB, ratio)
+	return valueA * (1 - ratio) + valueB * ratio
+end
+
 return Methods
