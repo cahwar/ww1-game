@@ -1,7 +1,10 @@
+local ContextActionService = game:GetService("ContextActionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local Knit = require(ReplicatedStorage.Common.Packages.Knit)
 local Signal = require(ReplicatedStorage.Common.Packages.Signal)
+local CustomShiftLock = require(ReplicatedStorage.Common.Classes.CustomShiftLock)
 
 local ClientController = Knit.CreateController({
 	Name = "ClientController",
@@ -27,6 +30,14 @@ end
 
 function ClientController:LaunchController()
 	print("Humanoid spawned")
+
+	self.shiftLock = CustomShiftLock.new()
+
+	ContextActionService:BindAction("Shiftlock", function(_, inputState)
+		if inputState == Enum.UserInputState.Begin then
+			self.shiftLock:Toggle()
+		end
+	end, false, Enum.KeyCode.LeftControl)
 end
 
 function ClientController:StopController()
