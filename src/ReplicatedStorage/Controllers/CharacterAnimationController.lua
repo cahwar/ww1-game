@@ -6,17 +6,16 @@ local Knit = require(ReplicatedStorage.Common.Packages.Knit)
 local Trove = require(ReplicatedStorage.Common.Packages.Trove)
 local Methods = require(ReplicatedStorage.Common.Modules.Methods)
 
-local Camera = workspace.CurrentCamera
 local Player = Players.LocalPlayer
 
-local CharacterMovementController = Knit.CreateController({ Name = "CharacterMovementController" })
+local CharacterAnimationController = Knit.CreateController({ Name = "CharacterAnimationController" })
 
-function CharacterMovementController:Init()
+function CharacterAnimationController:Init()
 	self.character = Player.Character or self.player.CharacterAdded:Wait()
 	self.humanoid = self.character:WaitForChild("Humanoid")
 end
 
-function CharacterMovementController:EnableRootPartTilts()
+function CharacterAnimationController:EnableRootPartTilts()
 	self.rootPartTiltsTrove = self.trove:Extend()
 
 	local humanoidRootPart = self.humanoid.RootPart
@@ -38,22 +37,22 @@ function CharacterMovementController:EnableRootPartTilts()
 	end)
 end
 
-function CharacterMovementController:LaunchController()
+function CharacterAnimationController:LaunchController()
 	self:Init()
 	self.trove = Trove.new()
 	self:EnableRootPartTilts()
 end
 
-function CharacterMovementController:StopController()
+function CharacterAnimationController:StopController()
 	if self.trove then
 		self.trove:Destroy()
 		self.trove = nil
 	end
 end
 
-function CharacterMovementController:KnitStart() end
+function CharacterAnimationController:KnitStart() end
 
-function CharacterMovementController:KnitInit()
+function CharacterAnimationController:KnitInit()
 	self.ClientController = Knit.GetController("ClientController")
 
 	self.ClientController.HumanoidSpawned:Connect(function()
@@ -65,4 +64,4 @@ function CharacterMovementController:KnitInit()
 	end)
 end
 
-return CharacterMovementController
+return CharacterAnimationController
