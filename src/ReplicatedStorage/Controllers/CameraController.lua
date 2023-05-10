@@ -4,8 +4,10 @@ local UserInputService = game:GetService("UserInputService")
 
 local Knit = require(ReplicatedStorage.Common.Packages.Knit)
 local Trove = require(ReplicatedStorage.Common.Packages.Trove)
+local Methods = require(ReplicatedStorage.Common.Modules.Methods)
 
 local CameraShake = require(ReplicatedStorage.Common.Classes.CameraShake)
+local CameraSettings = require(ReplicatedStorage.Common.Settings.CameraSettings)
 
 local Camera = workspace.CurrentCamera
 
@@ -121,6 +123,21 @@ function CameraController:EnableMoveCameraTilt()
 	end)
 end
 
+function CameraController:GetFovFromMovementState()
+	return CameraSettings.FieldOfViews[self.CharacterStateController.CurrentMovementState.Name]
+		or CameraSettings.FieldOfViews.Idle
+end
+
+function CameraController:TweenFov(fovToSet, tweenInfo: TweenInfo)
+	Methods.TweenNow(workspace.CurrentCamera, { FieldOfView = fovToSet }, tweenInfo).Promise
+		:andThenCall(
+			Methods.TweenNow,
+			workspace.CurrentCamera,
+			{ FieldOfView = self:GetFovFromMovementState() },
+			tweenInfo
+		)
+end
+
 function CameraController:LaunchController()
 	self:Init()
 
@@ -140,6 +157,8 @@ function CameraController:KnitStart() end
 
 function CameraController:KnitInit()
 	self.ClientController = Knit.GetController("ClientController")
+	self.CharacterStateController = Knit.GetController("CharacterStateController")
+
 	self.ClientController.HumanoidSpawned:Connect(function()
 		self:LaunchController()
 	end)
