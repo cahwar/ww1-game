@@ -20,6 +20,7 @@ end
 
 function ClientController:SetupController()
 	self:Init()
+	self:DefineCharacterType()
 	self.HumanoidSpawned:Fire()
 	self.humanoid.Died:Connect(function()
 		self.HumanoidDied:Fire()
@@ -28,14 +29,23 @@ function ClientController:SetupController()
 	end)
 end
 
+-- // Is character that we're playing R15 or R6
+function ClientController:DefineCharacterType()
+	if self.character:WaitForChild("UpperTorso", 3) then
+		self.CharacterType = "R15"
+	else
+		self.CharacterType = "R6"
+	end
+end
+
 function ClientController:LaunchController()
 	print("Humanoid spawned")
 
-	self.shiftLock = CustomShiftLock.new()
+	require(ReplicatedStorage.Common.Classes.CharacterLookFollower).new():Enable()
 
 	ContextActionService:BindAction("Shiftlock", function(_, inputState)
 		if inputState == Enum.UserInputState.Begin then
-			self.shiftLock:Toggle()
+			self.RobloxCameraController:ToggleMouseLock()
 		end
 	end, false, Enum.KeyCode.LeftControl)
 end
@@ -49,6 +59,8 @@ function ClientController:KnitStart()
 end
 
 function ClientController:KnitInit()
+	self.RobloxCameraController = Knit.GetController("RobloxCameraController")
+
 	self.HumanoidSpawned:Connect(function()
 		self:LaunchController()
 	end)

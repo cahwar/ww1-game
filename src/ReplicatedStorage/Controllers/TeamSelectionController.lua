@@ -3,7 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Common.Packages.Knit)
 local Trove = require(ReplicatedStorage.Common.Packages.Trove)
 local GuiModule = require(ReplicatedStorage.Common.Modules.GuiModule)
-local Cooldown = require(ReplicatedStorage.Common.Modules.Cooldown)
+local Cooldown = require(ReplicatedStorage.Common.Classes.Cooldown)
 
 local TeamSelectionController = Knit.CreateController({ Name = "TeamSelectionController" })
 

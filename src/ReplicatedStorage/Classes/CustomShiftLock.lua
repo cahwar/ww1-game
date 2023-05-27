@@ -5,13 +5,13 @@ local UserInputService = game:GetService("UserInputService")
 
 local Trove = require(ReplicatedStorage.Common.Packages.Trove)
 local Methods = require(ReplicatedStorage.Common.Modules.Methods)
+local CameraSettings = require(ReplicatedStorage.Common.Settings.CameraSettings)
 
 local Player = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 local Settings = {
 	CameraOffsetTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-	CameraOffset = Vector3.new(0, 0.2, 0),
 
 	RotationUpdateSensitivity = 0.75,
 }
@@ -35,6 +35,8 @@ function CustomShiftLock:_ChangeHumanoidCameraOffset(cameraOffset: Vector3)
 		self.cameraOffsetTween:Pause()
 	end
 
+	self.CurrentCameraOffset = cameraOffset
+
 	local tweenTable =
 		Methods.CreateTween(self.humanoid, { CameraOffset = cameraOffset }, Settings.CameraOffsetTweenInfo)
 	tweenTable.Promise:andThen(function()
@@ -43,16 +45,25 @@ function CustomShiftLock:_ChangeHumanoidCameraOffset(cameraOffset: Vector3)
 	tweenTable.Tween:Play()
 end
 
-function CustomShiftLock:Toggle()
+function CustomShiftLock:Toggle(cameraOffset: Vector3)
 	if self.enabled then
 		self:Disable()
 	else
-		self:Enable()
+		self:Enable(cameraOffset)
 	end
 end
 
-function CustomShiftLock:Enable()
+function CustomShiftLock:Enable(cameraOffset: Vector3)
+	if not cameraOffset then
+		warn("No camera offset passed, setting the default one")
+		cameraOffset = CameraSettings.CameraOffsets.ShiftLockOffset
+	end
+
 	if self.enabled then
+		if self.CurrentCameraOffset ~= cameraOffset then
+			self:_ChangeHumanoidCameraOffset(cameraOffset)
+		end
+
 		warn("Shift lock is already enabled")
 		return
 	end
@@ -65,9 +76,10 @@ function CustomShiftLock:Enable()
 		self:_ChangeHumanoidCameraOffset(currentCameeraOffset)
 		self.enabled = false
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		self.CurrentCameraOffset = nil
 	end)
 
-	self:_ChangeHumanoidCameraOffset(Settings.CameraOffset)
+	self:_ChangeHumanoidCameraOffset(cameraOffset)
 
 	self.trove:Connect(RunService.RenderStepped, function()
 		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter

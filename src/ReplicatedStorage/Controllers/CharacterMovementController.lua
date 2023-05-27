@@ -35,7 +35,12 @@ function CharacterMovementController:StopCurrentState()
 end
 
 function CharacterMovementController:StartSprint()
-	self.CharacterStateController.CurrentMovementState = self.CharacterStateController.CharacterMovementState.Sprint
+	if
+		not self.CharacterStateController:TryChangeState(self.CharacterStateController.CharacterMovementState.Sprint)
+	then
+		return
+	end
+
 	self:StopCurrentState()
 
 	self.sprintTrove = self.trove:Extend()
@@ -74,13 +79,9 @@ function CharacterMovementController:LaunchController()
 		elseif inputState == Enum.UserInputState.End then
 			self:StopSprint()
 		end
-	end, false, Settings.SprintKeyCode)
 
-	ContextActionService:BindAction("A", function(_, inputState)
-		if inputState == Enum.UserInputState.Begin then
-			self.CameraController:TweenFov(85, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out))
-		end
-	end, false, Enum.UserInputType.MouseButton1)
+		return Enum.ContextActionResult.Pass
+	end, false, Settings.SprintKeyCode)
 end
 
 function CharacterMovementController:StopController()
