@@ -6,8 +6,10 @@ GunsSettings.Guns = {
 			Idle = "RifleIdle",
 			Aim = "RifleAim",
 			AimShot = "RifleAimShot",
-			-- NoAimShot = "RifleNoAimShot",
+			NoAimShot = "RifleNoAimShot",
 		},
+
+		ShotCooldown = 1,
 	},
 }
 

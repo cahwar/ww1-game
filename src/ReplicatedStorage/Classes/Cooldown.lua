@@ -25,7 +25,7 @@ function Cooldown:SetActive(duration)
 end
 
 function Cooldown:IsActive()
-	return self.Enabeld
+	return self.Enabled
 end
 
 return Cooldown

@@ -13,6 +13,8 @@ local Animations = require(ReplicatedStorage.Common.Modules.Animations)
 local GunsSettings = require(ReplicatedStorage.Common.Settings.GunsSettings)
 local CameraSettings = require(ReplicatedStorage.Common.Settings.CameraSettings)
 
+local Cooldown = require(ReplicatedStorage.Common.Classes.Cooldown)
+
 local Player = Players.LocalPlayer
 
 local RobloxCameraController = Knit.GetController("RobloxCameraController")
@@ -34,6 +36,8 @@ local OnlyLocalPlayer = {
 local GunClient = Component.new({ Tag = "Gun", Extensions = { OnlyLocalPlayer } })
 
 function GunClient:Start()
+	self.shotCooldown = Cooldown.new()
+
 	self.character = Player.Character or Player.CharacterAdded:Wait()
 	self.trove = Trove.new()
 
@@ -120,12 +124,22 @@ function GunClient:BindPcInputs()
 	end)
 end
 
+function GunClient:ShakeCameraOnShot() end
+
 function GunClient:Shot()
+	if self.shotCooldown:IsActive() then
+		return
+	end
+
+	self.shotCooldown:SetActive(self.gunSettings.ShotCooldown)
+
 	-- Aim shot or common shot
 	local shotAnimationName = nil
 
 	if CharacterStateController.CurrentActionState == CharacterStateController.CharacterActionState.Aim then
 		shotAnimationName = self.gunSettings.Animations.AimShot
+	else
+		shotAnimationName = self.gunSettings.Animations.NoAimShot
 	end
 
 	Animations:PlayAnimation(self.character, shotAnimationName, 0, nil)

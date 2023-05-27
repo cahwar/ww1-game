@@ -81,15 +81,28 @@ function CharacterAnimationController:StopController()
 	end
 end
 
+function CharacterAnimationController:SetLookFollower(character: Model, waistCFrame: CFrame)
+	Methods.TweenNow(
+		character:FindFirstChild("Waist", true),
+		{ C1 = waistCFrame },
+		TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	)
+end
+
 function CharacterAnimationController:KnitStart()
 	workspace.Retargeting = Enum.AnimatorRetargetingMode.Disabled
 	workspace:GetPropertyChangedSignal("Retargeting"):Connect(function()
 		workspace.Retargeting = Enum.AnimatorRetargetingMode.Disabled
 	end)
+
+	self.CharacterAnimationService.ReplicateLookFollower:Connect(function(character: Model, waistCFrame: CFrame)
+		self:SetLookFollower(character, waistCFrame)
+	end)
 end
 
 function CharacterAnimationController:KnitInit()
 	self.ClientController = Knit.GetController("ClientController")
+	self.CharacterAnimationService = Knit.GetService("CharacterAnimationService")
 
 	self.ClientController.HumanoidSpawned:Connect(function()
 		self:LaunchController()
