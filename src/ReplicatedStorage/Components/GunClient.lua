@@ -1,30 +1,26 @@
 local ContextActionService = game:GetService("ContextActionService")
-local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local Component = require(ReplicatedStorage.Common.Packages.Component)
 local Trove = require(ReplicatedStorage.Common.Packages.Trove)
 local Knit = require(ReplicatedStorage.Common.Packages.Knit)
 local Methods = require(ReplicatedStorage.Common.Modules.Methods)
+local Sounds = require(ReplicatedStorage.Common.Modules.Sounds)
 
 local Animations = require(ReplicatedStorage.Common.Modules.Animations)
 local GunsSettings = require(ReplicatedStorage.Common.Settings.GunsSettings)
 local CameraSettings = require(ReplicatedStorage.Common.Settings.CameraSettings)
 
 local Cooldown = require(ReplicatedStorage.Common.Classes.Cooldown)
+local CameraShake = require(ReplicatedStorage.Common.Classes.CameraShake)
 
 local Player = Players.LocalPlayer
 
 local RobloxCameraController = Knit.GetController("RobloxCameraController")
 local CharacterStateController = Knit.GetController("CharacterStateController")
 local CameraController = Knit.GetController("CameraController")
-
-local Settings = {
-	MinCameraAngle = -70,
-	MaxCameraAngle = 70,
-}
+local GunController = Knit.GetController("GunController")
 
 local OnlyLocalPlayer = {
 	ShouldConstruct = function(component)
@@ -124,7 +120,42 @@ function GunClient:BindPcInputs()
 	end)
 end
 
-function GunClient:ShakeCameraOnShot() end
+function GunClient:ShakeCameraOnShot()
+	local shakeCalculationsToApply = CharacterStateController.CurrentActionState
+				== CharacterStateController.CharacterActionState.Aim
+			and self.gunSettings.AimShakeCalculations
+		or self.gunSettings.NoAimShakeCalculations
+
+	CameraShake.fromStaticCalculations({ RotationAxis = "XZ" }, shakeCalculationsToApply):DestroySmoothly(0.2)
+end
+
+function GunClient:BlurCameraOnShot()
+	local blur = Instance.new("BlurEffect")
+	blur.Size = 0
+	blur.Parent = workspace.CurrentCamera
+	Methods.TweenNow(
+		blur,
+		{ Size = 12 },
+		TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0)
+	).Promise
+		:andThen(function()
+			blur:Destroy()
+		end)
+end
+
+-- // Applies quick bright color correction
+function GunClient:HighlightCameraOnShot()
+	local colorCorrection = Instance.new("ColorCorrectionEffect")
+	colorCorrection.Parent = workspace.CurrentCamera
+	Methods.TweenNow(
+		colorCorrection,
+		{ Brightness = 0.1 },
+		TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0)
+	).Promise
+		:andThen(function()
+			colorCorrection:Destroy()
+		end)
+end
 
 function GunClient:Shot()
 	if self.shotCooldown:IsActive() then
@@ -142,7 +173,12 @@ function GunClient:Shot()
 		shotAnimationName = self.gunSettings.Animations.NoAimShot
 	end
 
+	Sounds:PlaySoundOnce(self.gunSettings.Sounds.Shot, Sounds.CreateSoundPart(self.character.HumanoidRootPart.Position))
 	Animations:PlayAnimation(self.character, shotAnimationName, 0, nil)
+	self:ShakeCameraOnShot()
+	self:BlurCameraOnShot()
+	self:HighlightCameraOnShot()
+	GunController:ApplyShotEffects(self.Instance, self.gunSettings)
 end
 
 function GunClient:StartAim()
