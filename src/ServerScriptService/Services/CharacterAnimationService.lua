@@ -20,7 +20,12 @@ function CharacterAnimationService.Client:ReplicateCharacterLookFollower(player:
 	self.ReplicateLookFollower:FireExcept(player, character, waistCFrame)
 end
 
-function CharacterAnimationService:KnitStart() end
+function CharacterAnimationService:KnitStart()
+	workspace.Retargeting = Enum.AnimatorRetargetingMode.Disabled
+	workspace:GetPropertyChangedSignal("Retargeting"):Connect(function()
+		workspace.Retargeting = Enum.AnimatorRetargetingMode.Disabled
+	end)
+end
 
 function CharacterAnimationService:KnitInit() end
 

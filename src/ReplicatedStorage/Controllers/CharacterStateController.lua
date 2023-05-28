@@ -13,14 +13,14 @@ local Player = Players.LocalPlayer
 local CharacterMovementState = EnumList.new("CharacterMovementState", {
 	"Idle",
 	"Sprint",
-	"Crouch",
+	"Crawl",
 	"Dead",
 })
 
 local CharacterActionState = EnumList.new("CharacterActionState", {
 	"Aim",
-	"Healing", -- Placholder
-	"Vaulting", -- Placholder
+	"Healing", -- Placeholder
+	"Vaulting", -- Placeholder
 })
 
 local CharacterStateController = Knit.CreateController({

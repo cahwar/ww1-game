@@ -90,11 +90,6 @@ function CharacterAnimationController:SetLookFollower(character: Model, waistCFr
 end
 
 function CharacterAnimationController:KnitStart()
-	workspace.Retargeting = Enum.AnimatorRetargetingMode.Disabled
-	workspace:GetPropertyChangedSignal("Retargeting"):Connect(function()
-		workspace.Retargeting = Enum.AnimatorRetargetingMode.Disabled
-	end)
-
 	self.CharacterAnimationService.ReplicateLookFollower:Connect(function(character: Model, waistCFrame: CFrame)
 		self:SetLookFollower(character, waistCFrame)
 	end)

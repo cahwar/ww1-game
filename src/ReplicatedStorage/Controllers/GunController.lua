@@ -39,7 +39,7 @@ function GunController:ApplyShotEffects(gunInstance: Instance, gunSettings)
 	task.delay(5, gunEffects.Destroy, gunEffects)
 end
 
--- // This one is used to handle events for every player excent the one that fired the gun
+-- // This one is used to handle event for every player excent the one that fired the gun
 function GunController:OnGunShot(character: Model)
 	local gunInstance = character:FindFirstChildWhichIsA("Tool")
 

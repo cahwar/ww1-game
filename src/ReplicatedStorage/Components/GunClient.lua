@@ -7,10 +7,12 @@ local Trove = require(ReplicatedStorage.Common.Packages.Trove)
 local Knit = require(ReplicatedStorage.Common.Packages.Knit)
 local Methods = require(ReplicatedStorage.Common.Modules.Methods)
 local Sounds = require(ReplicatedStorage.Common.Modules.Sounds)
+local Timer = require(ReplicatedStorage.Common.Packages.Timer)
 
 local Animations = require(ReplicatedStorage.Common.Modules.Animations)
 local GunsSettings = require(ReplicatedStorage.Common.Settings.GunsSettings)
 local CameraSettings = require(ReplicatedStorage.Common.Settings.CameraSettings)
+local HumanoidSettings = require(ReplicatedStorage.Common.Settings.HumanoidSettings)
 
 local Cooldown = require(ReplicatedStorage.Common.Classes.Cooldown)
 local CameraShake = require(ReplicatedStorage.Common.Classes.CameraShake)
@@ -19,8 +21,10 @@ local Player = Players.LocalPlayer
 
 local RobloxCameraController = Knit.GetController("RobloxCameraController")
 local CharacterStateController = Knit.GetController("CharacterStateController")
+local CharacterMovementController = Knit.GetController("CharacterMovementController")
 local CameraController = Knit.GetController("CameraController")
 local GunController = Knit.GetController("GunController")
+local ClientController = Knit.GetController("ClientController")
 
 local OnlyLocalPlayer = {
 	ShouldConstruct = function(component)
@@ -54,6 +58,10 @@ function GunClient:Start()
 	self.trove:Connect(self.Instance.Destroying, function()
 		self:OnDestroy()
 	end)
+
+	self.gunStats = {
+		fireRate = self.gunSettings.PossibleFireRates[1],
+	}
 end
 
 function GunClient:OnEquip()
@@ -72,9 +80,11 @@ function GunClient:OnEquip()
 		RobloxCameraController:SetMouseLockCameraOffset(CameraSettings.CameraOffsets.GunDefaultCameraOffset)
 	end
 
+	ClientController:SetMouseCursor("Crosshair")
 	self:BindPcInputs()
 
 	self.sessionTrove:Add(function()
+		ClientController:SetMouseCursor("Default")
 		self.Equipped = false
 		RobloxCameraController:DisableMouseLock()
 		Animations:StopAnimation(self.character, self.gunSettings.Animations.Idle, 0.15)
@@ -108,16 +118,54 @@ function GunClient:BindPcInputs()
 
 	ContextActionService:BindAction("Shot", function(_, inputState: Enum.UserInputState)
 		if inputState == Enum.UserInputState.Begin then
-			self:Shot()
+			if self.gunStats.fireRate == GunsSettings.FireRates.Semi then
+				self:Shot()
+			elseif self.gunStats.fireRate == GunsSettings.FireRates.Auto then
+				local automaticShotTimer = Timer.new(self.gunSettings.ShotCooldown)
+				automaticShotTimer.Tick:Connect(function()
+					self:Shot()
+				end)
+
+				self.automaticShotTrove = self.sessionTrove:Extend()
+				self.automaticShotTrove:Add(function()
+					self.automaticShotTrove = nil
+					automaticShotTimer:Destroy()
+				end)
+
+				automaticShotTimer:StartNow()
+			end
+		elseif inputState == Enum.UserInputState.End and self.automaticShotTrove then
+			self.automaticShotTrove:Destroy()
 		end
 
 		return Enum.ContextActionResult.Pass
 	end, false, Enum.UserInputType.MouseButton1)
 
+	ContextActionService:BindAction("SwitchFireRate", function(_, inputState: Enum.UserInputState)
+		if inputState == Enum.UserInputState.Begin then
+			self:SwitchFireRate()
+		end
+	end, false, Enum.KeyCode.V)
+
 	self.sessionTrove:Add(function()
 		ContextActionService:UnbindAction("Aim")
 		ContextActionService:UnbindAction("Shot")
+		ContextActionService:UnbindAction("SwitchFireRate")
 	end)
+end
+
+function GunClient:SwitchFireRate()
+	local currentFireRateIndex = table.find(self.gunSettings.PossibleFireRates, self.gunStats.fireRate)
+	if not currentFireRateIndex then
+		print("no fire rate index")
+		self.gunStats.fireRate = self.gunSettings.PossibleFireRates[1]
+	else
+		local selectedFireRate = self.gunSettings.PossibleFireRates[currentFireRateIndex + 1] ~= nil
+				and self.gunSettings.PossibleFireRates[currentFireRateIndex + 1]
+			or self.gunSettings.PossibleFireRates[1]
+
+		self.gunStats.fireRate = selectedFireRate
+	end
 end
 
 function GunClient:ShakeCameraOnShot()
@@ -158,11 +206,13 @@ function GunClient:HighlightCameraOnShot()
 end
 
 function GunClient:Shot()
-	if self.shotCooldown:IsActive() then
-		return
-	end
+	if self.gunStats.fireRate ~= GunsSettings.FireRates.Auto then
+		if self.shotCooldown:IsActive() then
+			return
+		end
 
-	self.shotCooldown:SetActive(self.gunSettings.ShotCooldown)
+		self.shotCooldown:SetActive(self.gunSettings.ShotCooldown)
+	end
 
 	-- Aim shot or common shot
 	local shotAnimationName = nil
@@ -187,6 +237,14 @@ function GunClient:StartAim()
 		self.aimTrove = nil
 	end)
 
+	self.aimTrove:Connect(CharacterStateController.Signals.MovementStateChanged, function()
+		self.character.Humanoid.WalkSpeed = HumanoidSettings.AimSpeedMultipler
+			* CharacterMovementController:GetCurrentStateSpeed()
+	end)
+
+	self.character.Humanoid.WalkSpeed = HumanoidSettings.AimSpeedMultipler
+		* CharacterMovementController:GetCurrentStateSpeed()
+
 	RobloxCameraController:SetMouseLockCameraOffset(CameraSettings.CameraOffsets.GunAimCameraOffset)
 	Animations:PlayAnimation(self.character, self.gunSettings.Animations.Aim, 0.15, 0)
 
@@ -202,6 +260,8 @@ function GunClient:StartAim()
 		if CharacterStateController.CurrentActionState == CharacterStateController.CharacterActionState.Aim then
 			CharacterStateController:ChangeActionState(nil)
 		end
+
+		self.character.Humanoid.WalkSpeed = CharacterMovementController:GetCurrentStateSpeed()
 
 		if self.Equipped then
 			RobloxCameraController:SetMouseLockCameraOffset(CameraSettings.CameraOffsets.GunDefaultCameraOffset)

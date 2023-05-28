@@ -1,10 +1,14 @@
 local ContextActionService = game:GetService("ContextActionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 
 local Knit = require(ReplicatedStorage.Common.Packages.Knit)
 local Signal = require(ReplicatedStorage.Common.Packages.Signal)
-local CustomShiftLock = require(ReplicatedStorage.Common.Classes.CustomShiftLock)
+local Trove = require(ReplicatedStorage.Common.Packages.Trove)
+
+local CameraSettings = require(ReplicatedStorage.Common.Settings.CameraSettings)
+
+local CharacterLookFollower = require(ReplicatedStorage.Common.Classes.CharacterLookFollower)
 
 local ClientController = Knit.CreateController({
 	Name = "ClientController",
@@ -14,6 +18,7 @@ local ClientController = Knit.CreateController({
 
 function ClientController:Init()
 	self.player = game:GetService("Players").LocalPlayer
+	self.mouse = self.player:GetMouse()
 	self.character = self.player.Character or self.player.CharacterAdded:Wait()
 	self.humanoid = self.character:WaitForChild("Humanoid")
 end
@@ -38,16 +43,17 @@ function ClientController:DefineCharacterType()
 	end
 end
 
+function ClientController:SetMouseCursor(cursorName: string)
+	self.mouse.Icon = CameraSettings.Cursors[cursorName] or CameraSettings.Cursors.Default
+end
+
 function ClientController:LaunchController()
-	print("Humanoid spawned")
-
-	require(ReplicatedStorage.Common.Classes.CharacterLookFollower).new():Enable()
-
-	ContextActionService:BindAction("Shiftlock", function(_, inputState)
-		if inputState == Enum.UserInputState.Begin then
-			self.RobloxCameraController:ToggleMouseLock()
-		end
-	end, false, Enum.KeyCode.LeftControl)
+	self.trove = Trove.new()
+	self.CharacterLookFollower = CharacterLookFollower.new()
+	self.CharacterLookFollower:Enable()
+	self.trove:Add(function()
+		self.CharacterLookFollower:Disable()
+	end)
 end
 
 function ClientController:StopController()
@@ -56,6 +62,7 @@ end
 
 function ClientController:KnitStart()
 	self:SetupController()
+	self:SetMouseCursor("Default")
 end
 
 function ClientController:KnitInit()

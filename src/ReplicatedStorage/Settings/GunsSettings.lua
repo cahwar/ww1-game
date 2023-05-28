@@ -1,4 +1,13 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local EnumList = require(ReplicatedStorage.Common.Packages.EnumList)
+
 local GunsSettings = {}
+
+GunsSettings.FireRates = EnumList.new("FireRates", {
+	"Semi",
+	"Auto",
+})
 
 GunsSettings.Guns = {
 	Rifle = {
@@ -7,17 +16,24 @@ GunsSettings.Guns = {
 			Aim = "RifleAim",
 			AimShot = "RifleAimShot",
 			NoAimShot = "RifleNoAimShot",
+			BetweenShotReload = "RifleBetweenShotReload",
 		},
 
 		Sounds = {
 			Shot = "GunShot_2",
+			BetweenShotReload = nil,
 		},
 
 		Effects = {
 			Shot = "SimpleShotEffect",
 		},
 
-		ShotCooldown = 0.7,
+		PossibleFireRates = {
+			GunsSettings.FireRates.Semi,
+			GunsSettings.FireRates.Auto,
+		},
+
+		ShotCooldown = 0.2,
 
 		NoAimShakeCalculations = {
 			SinHeight = 45,

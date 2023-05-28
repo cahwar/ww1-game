@@ -10,7 +10,11 @@ local Camera = workspace.CurrentCamera
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 
-local CharacterAnimationService = Knit.GetService("CharacterAnimationService")
+local CharacterAnimationService
+
+Knit.OnStart():andThen(function()
+	CharacterAnimationService = Knit.GetService("CharacterAnimationService")
+end)
 
 local Settings = {
 	LookReplicationCooldown = 1,
