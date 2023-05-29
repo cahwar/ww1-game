@@ -58,11 +58,23 @@ function CharacterMovementController:LaunchController()
 		return Enum.ContextActionResult.Pass
 	end, false, Enum.KeyCode.LeftShift)
 
-	ContextActionService:BindAction("Crawl", function(_, inputState: Enum.UserInputState)
+	ContextActionService:BindAction("HoldCrawl", function(_, inputState: Enum.UserInputState)
 		if inputState == Enum.UserInputState.Begin then
 			self.CharacterStateController:SetMainStateIfPossible("Crawl")
 		elseif inputState == Enum.UserInputState.End and self.CharacterStateController.MainState == "Crawl" then
 			self.CharacterStateController:SetMainState("Default")
+		end
+
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.LeftControl)
+
+	ContextActionService:BindAction("ToggleCrawl", function(_, inputState: Enum.UserInputState)
+		if inputState == Enum.UserInputState.Begin then
+			if self.CharacterStateController.MainState == "Crawl" then
+				self.CharacterStateController:SetMainStateIfPossible("Default")
+			else
+				self.CharacterStateController:SetMainStateIfPossible("Crawl")
+			end
 		end
 
 		return Enum.ContextActionResult.Pass

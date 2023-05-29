@@ -43,9 +43,9 @@ GunsSettings.Guns = {
 		},
 
 		AimShakeCalculations = {
-			SinSpeed = 26,
-			CosSpeed = 16,
-			SinHeight = 24,
+			SinSpeed = 36,
+			CosSpeed = 32,
+			SinHeight = 19,
 			CosHeight = 5.5,
 		},
 	},
