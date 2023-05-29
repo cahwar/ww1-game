@@ -1,38 +1,27 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Knit = require(ReplicatedStorage.Common.Packages.Knit)
-local EnumList = require(ReplicatedStorage.Common.Packages.EnumList)
-local Trove = require(ReplicatedStorage.Common.Packages.Trove)
 local Signal = require(ReplicatedStorage.Common.Packages.Signal)
+local Trove = require(ReplicatedStorage.Common.Packages.Trove)
 
+local StatesSettings = require(ReplicatedStorage.Common.Settings.StatesSettings)
 local ConflictingCharacterStates = require(ReplicatedStorage.Common.Settings.ConflictingCharacterStates)
 
 local Player = Players.LocalPlayer
 
-local CharacterMovementState = EnumList.new("CharacterMovementState", {
-	"Idle",
-	"Sprint",
-	"Crawl",
-	"Dead",
-})
-
-local CharacterActionState = EnumList.new("CharacterActionState", {
-	"Aim",
-	"Healing", -- Placeholder
-	"Vaulting", -- Placeholder
-})
-
 local CharacterStateController = Knit.CreateController({
 	Name = "CharacterStateController",
-
-	CharacterMovementState = CharacterMovementState,
-	CharacterActionState = CharacterActionState,
-
 	Signals = {
 		MovementStateChanged = Signal.new(),
-		ActionStateChanged = Signal.new(),
+		MainStateChanged = Signal.new(),
+		TemporaryStateChanged = Signal.new(),
 	},
+
+	MainState = nil,
+	TemporaryState = nil,
+	MovementState = nil,
 })
 
 function CharacterStateController:Init()
@@ -40,61 +29,76 @@ function CharacterStateController:Init()
 	self.humanoid = self.character:WaitForChild("Humanoid")
 end
 
-function CharacterStateController:CanChangeState(newStateName: string)
-	return table.find(ConflictingCharacterStates[newStateName], self.CurrentMovementState.Name) == nil
-		and (
-			self.CurrentActionState == nil
-			or table.find(ConflictingCharacterStates[newStateName], self.CurrentActionState.Name) == nil
+function CharacterStateController:CanChangeState(stateToSet: string)
+	if
+		(
+			ConflictingCharacterStates[self.MainState]
+			and table.find(ConflictingCharacterStates[self.MainState], stateToSet)
 		)
-end
-
-function CharacterStateController:TryChangeState(stateToSet: typeof(CharacterMovementState)): boolean
-	if not self:CanChangeState(stateToSet.Name) then
+		or (
+			self.TemporaryState
+			and ConflictingCharacterStates[self.TemporaryState]
+			and table.find(ConflictingCharacterStates[self.TemporaryState], stateToSet)
+		)
+	then
 		return false
 	end
-
-	self:ChangeState(stateToSet)
 
 	return true
 end
 
-function CharacterStateController:ChangeState(stateToSet: typeof(CharacterMovementState))
-	if self.CurrentMovementState == stateToSet then
-		return
+function CharacterStateController:SetMainStateIfPossible(stateName: string)
+	if self:CanChangeState(stateName) then
+		self:SetMainState(stateName)
+		return true
 	end
 
-	self.CurrentMovementState = stateToSet
-	self.Signals.MovementStateChanged:Fire(self.CurrentMovementState)
+	return false
 end
 
-function CharacterStateController:TryChangeActionState(stateToSet: typeof(CharacterActionState)): boolean
-	if not self:CanChangeState(stateToSet.Name) then
-		return false
+function CharacterStateController:SetTemporaryStateIfPossible(stateName: string)
+	if self:CanChangeState(stateName) then
+		self:SetTemporaryState(stateName)
+		return true
 	end
 
-	self:ChangeActionState(stateToSet)
-
-	return true
+	return false
 end
 
-function CharacterStateController:ChangeActionState(stateToSet: typeof(CharacterActionState) | nil)
-	if self.CurrentActionState == stateToSet then
-		return
-	end
+function CharacterStateController:SetMainState(stateName: string)
+	self.MainState = stateName
+	self.Signals.MainStateChanged:Fire(stateName, StatesSettings[stateName])
+end
 
-	self.CurrentActionState = stateToSet
-	self.Signals.ActionStateChanged:Fire(self.CurrentActionState)
+function CharacterStateController:SetTemporaryState(stateName: string)
+	self.TemporaryState = stateName
+	self.Signals.TemporaryStateChanged:Fire(stateName, StatesSettings[stateName])
+end
+
+function CharacterStateController:RemoveTemporaryState()
+	self.TemporaryState = nil
+	self.Signals.TemporaryStateChanged:Fire(nil)
 end
 
 function CharacterStateController:LaunchController()
+	self:Init()
+
 	self.trove = Trove.new()
-	self:ChangeState(CharacterMovementState.Idle)
-	self:ChangeActionState(nil)
 
 	self.trove:Add(function()
-		self:ChangeState(CharacterMovementState.Dead)
-		self:ChangeActionState(nil)
+		self:RemoveTemporaryState()
 	end)
+
+	self.trove:Connect(RunService.Heartbeat, function()
+		local movementState = self.humanoid.MoveDirection.Magnitude >= 0.1 and "Move" or "Idle"
+		if self.MovementState ~= movementState then
+			self.MovementState = movementState
+			self.Signals.MovementStateChanged:Fire(movementState)
+		end
+	end)
+
+	self:SetMainState("Default")
+	self:RemoveTemporaryState()
 end
 
 function CharacterStateController:StopController()
@@ -104,14 +108,13 @@ function CharacterStateController:StopController()
 	end
 end
 
-function CharacterStateController:KnitStart() end
-
 function CharacterStateController:KnitInit()
 	self.ClientController = Knit.GetController("ClientController")
 
 	self.ClientController.HumanoidSpawned:Connect(function()
 		self:LaunchController()
 	end)
+
 	self.ClientController.HumanoidDied:Connect(function()
 		self:StopController()
 	end)

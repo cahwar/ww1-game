@@ -78,7 +78,6 @@ function Animations:PlayAnimation(
 	playbackSpeed: number?
 )
 	local animationInfo = self:GetAnimationInfo(target, animationIndex)
-
 	if not animationInfo then
 		return
 	end

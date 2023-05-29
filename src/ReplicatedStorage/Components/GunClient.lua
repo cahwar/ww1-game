@@ -12,7 +12,6 @@ local Timer = require(ReplicatedStorage.Common.Packages.Timer)
 local Animations = require(ReplicatedStorage.Common.Modules.Animations)
 local GunsSettings = require(ReplicatedStorage.Common.Settings.GunsSettings)
 local CameraSettings = require(ReplicatedStorage.Common.Settings.CameraSettings)
-local HumanoidSettings = require(ReplicatedStorage.Common.Settings.HumanoidSettings)
 
 local Cooldown = require(ReplicatedStorage.Common.Classes.Cooldown)
 local CameraShake = require(ReplicatedStorage.Common.Classes.CameraShake)
@@ -21,7 +20,6 @@ local Player = Players.LocalPlayer
 
 local RobloxCameraController = Knit.GetController("RobloxCameraController")
 local CharacterStateController = Knit.GetController("CharacterStateController")
-local CharacterMovementController = Knit.GetController("CharacterMovementController")
 local CameraController = Knit.GetController("CameraController")
 local GunController = Knit.GetController("GunController")
 local ClientController = Knit.GetController("ClientController")
@@ -104,7 +102,7 @@ end
 function GunClient:BindPcInputs()
 	ContextActionService:BindAction("Aim", function(_, inputState: Enum.UserInputState)
 		if inputState == Enum.UserInputState.Begin then
-			if not CharacterStateController:TryChangeActionState(CharacterStateController.CharacterActionState.Aim) then
+			if not CharacterStateController:SetTemporaryStateIfPossible("Aim") then
 				return
 			end
 
@@ -118,11 +116,20 @@ function GunClient:BindPcInputs()
 
 	ContextActionService:BindAction("Shot", function(_, inputState: Enum.UserInputState)
 		if inputState == Enum.UserInputState.Begin then
+			if not CharacterStateController:CanChangeState("Shot") then
+				return
+			end
+
 			if self.gunStats.fireRate == GunsSettings.FireRates.Semi then
 				self:Shot()
 			elseif self.gunStats.fireRate == GunsSettings.FireRates.Auto then
 				local automaticShotTimer = Timer.new(self.gunSettings.ShotCooldown)
 				automaticShotTimer.Tick:Connect(function()
+					if not CharacterStateController:CanChangeState("Shot") then
+						self.automaticShotTrove:Destroy()
+						return
+					end
+
 					self:Shot()
 				end)
 
@@ -169,8 +176,7 @@ function GunClient:SwitchFireRate()
 end
 
 function GunClient:ShakeCameraOnShot()
-	local shakeCalculationsToApply = CharacterStateController.CurrentActionState
-				== CharacterStateController.CharacterActionState.Aim
+	local shakeCalculationsToApply = CharacterStateController.TemporaryState == "Aim"
 			and self.gunSettings.AimShakeCalculations
 		or self.gunSettings.NoAimShakeCalculations
 
@@ -217,7 +223,7 @@ function GunClient:Shot()
 	-- Aim shot or common shot
 	local shotAnimationName = nil
 
-	if CharacterStateController.CurrentActionState == CharacterStateController.CharacterActionState.Aim then
+	if CharacterStateController.TemporaryState == "Aim" then
 		shotAnimationName = self.gunSettings.Animations.AimShot
 	else
 		shotAnimationName = self.gunSettings.Animations.NoAimShot
@@ -237,41 +243,26 @@ function GunClient:StartAim()
 		self.aimTrove = nil
 	end)
 
-	self.aimTrove:Connect(CharacterStateController.Signals.MovementStateChanged, function()
-		self.character.Humanoid.WalkSpeed = HumanoidSettings.AimSpeedMultipler
-			* CharacterMovementController:GetCurrentStateSpeed()
-	end)
-
-	self.character.Humanoid.WalkSpeed = HumanoidSettings.AimSpeedMultipler
-		* CharacterMovementController:GetCurrentStateSpeed()
-
 	RobloxCameraController:SetMouseLockCameraOffset(CameraSettings.CameraOffsets.GunAimCameraOffset)
 	Animations:PlayAnimation(self.character, self.gunSettings.Animations.Aim, 0.15, 0)
 
 	self.AimAnimationTrack = Animations:GetAnimationInfo(self.character, self.gunSettings.Animations.Aim).Track
 
-	Methods.TweenNow(
-		workspace.CurrentCamera,
-		{ FieldOfView = CameraSettings.FieldOfViews.Aim },
+	CameraController:SetTemporaryFOV(
+		CameraSettings.FieldOfViews.Aim,
 		TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	)
 
 	self.aimTrove:Add(function()
-		if CharacterStateController.CurrentActionState == CharacterStateController.CharacterActionState.Aim then
-			CharacterStateController:ChangeActionState(nil)
+		if CharacterStateController.TemporaryState == "Aim" then
+			CharacterStateController:RemoveTemporaryState()
 		end
-
-		self.character.Humanoid.WalkSpeed = CharacterMovementController:GetCurrentStateSpeed()
 
 		if self.Equipped then
 			RobloxCameraController:SetMouseLockCameraOffset(CameraSettings.CameraOffsets.GunDefaultCameraOffset)
 		end
 
-		Methods.TweenNow(
-			workspace.CurrentCamera,
-			{ FieldOfView = CameraController:GetFovFromMovementState() },
-			TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-		)
+		CameraController:RemoveTemporaryFOV(TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out))
 
 		Animations:StopAnimation(self.character, self.gunSettings.Animations.Aim, 0.15)
 	end)

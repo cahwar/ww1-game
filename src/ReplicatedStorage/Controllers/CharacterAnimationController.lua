@@ -5,6 +5,9 @@ local RunService = game:GetService("RunService")
 local Knit = require(ReplicatedStorage.Common.Packages.Knit)
 local Trove = require(ReplicatedStorage.Common.Packages.Trove)
 local Methods = require(ReplicatedStorage.Common.Modules.Methods)
+local Animations = require(ReplicatedStorage.Common.Modules.Animations)
+
+local StatesSettings = require(ReplicatedStorage.Common.Settings.StatesSettings)
 
 local Player = Players.LocalPlayer
 
@@ -63,6 +66,21 @@ function CharacterAnimationController:EnableRootPartTiltsR15()
 	end)
 end
 
+function CharacterAnimationController:OnCharacterStateChanged()
+	local mainState = self.CharacterStateController.MainState
+	local movementState = self.CharacterStateController.MovementState
+
+	local animationToPlaySettings = StatesSettings[mainState] and StatesSettings[mainState].Animations[movementState]
+		or StatesSettings.Default.Animations.Idle
+
+	if self.animationPlaying then
+		Animations:StopAnimation(self.character, self.animationPlaying.Name, 0.1)
+	end
+
+	self.animationPlaying = animationToPlaySettings
+	Animations:PlayAnimation(self.character, animationToPlaySettings.Name, 0.1, animationToPlaySettings.Speed)
+end
+
 function CharacterAnimationController:LaunchController()
 	self:Init()
 	self.trove = Trove.new()
@@ -72,6 +90,25 @@ function CharacterAnimationController:LaunchController()
 	elseif self.ClientController.CharacterType == "R6" then
 		self:EnableRootPartTiltsR6()
 	end
+
+	self.character:WaitForChild("Animate"):Destroy()
+	for _, v in self.humanoid:GetPlayingAnimationTracks() do
+		v:Stop()
+	end
+
+	for _, v in ReplicatedStorage.Common.GameParts.Animations.Movement:GetChildren() do
+		Animations:LoadAnimation(self.character, v)
+	end
+
+	self:OnCharacterStateChanged()
+
+	self.trove:Connect(self.CharacterStateController.Signals.MovementStateChanged, function()
+		self:OnCharacterStateChanged()
+	end)
+
+	self.trove:Connect(self.CharacterStateController.Signals.MainStateChanged, function()
+		self:OnCharacterStateChanged()
+	end)
 end
 
 function CharacterAnimationController:StopController()
@@ -98,6 +135,7 @@ end
 function CharacterAnimationController:KnitInit()
 	self.ClientController = Knit.GetController("ClientController")
 	self.CharacterAnimationService = Knit.GetService("CharacterAnimationService")
+	self.CharacterStateController = Knit.GetController("CharacterStateController")
 
 	self.ClientController.HumanoidSpawned:Connect(function()
 		self:LaunchController()

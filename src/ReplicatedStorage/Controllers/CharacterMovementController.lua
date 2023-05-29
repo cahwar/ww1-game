@@ -4,16 +4,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Common.Packages.Knit)
 local Trove = require(ReplicatedStorage.Common.Packages.Trove)
-local Methods = require(ReplicatedStorage.Common.Modules.Methods)
 
-local Player = Players.LocalPlayer
 local HumanoidSettings = require(ReplicatedStorage.Common.Settings.HumanoidSettings)
 
-local Settings = {
-	FovTweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-	SprintKeyCode = Enum.KeyCode.LeftShift,
-	CrawlKeyCode = Enum.KeyCode.LeftControl,
-}
+local Player = Players.LocalPlayer
 
 local CharacterMovementController = Knit.CreateController({ Name = "CharacterMovementController" })
 
@@ -22,134 +16,57 @@ function CharacterMovementController:Init()
 	self.humanoid = self.character:WaitForChild("Humanoid")
 end
 
-function CharacterMovementController:setSpeedWithStateCheck(speedToSet: number, requiredState)
-	self.humanoid.WalkSpeed = speedToSet
-	task.defer(function()
-		if self.CharacterStateController.CurrentMovementState == requiredState then
-			self.humanoid.WalkSpeed = speedToSet
-		end
-	end)
-end
-
-function CharacterMovementController:getHumanoidSpeedToSet()
-	local currentStateSpeed = self:GetCurrentStateSpeed()
-	return currentStateSpeed
-end
-
-function CharacterMovementController:GetCurrentStateSpeed()
-	return HumanoidSettings[(self.CharacterStateController.CharacterMovementState.Name or "Idle") .. "Speed"]
-end
-
-function CharacterMovementController:StopCurrentState()
-	if
-		self.CharacterStateController.CurrentMovementState
-		== self.CharacterStateController.CharacterMovementState.Sprint
-	then
-		self:StopSprint()
-	elseif
-		self.CharacterStateController.CurrentMovementState
-		== self.CharacterStateController.CharacterMovementState.Crawl
-	then
-		self:StopCrawl()
-	end
-end
-
-function CharacterMovementController:StartSprint()
-	if
-		not self.CharacterStateController:TryChangeState(self.CharacterStateController.CharacterMovementState.Sprint)
-	then
-		return
-	end
-
-	self:StopCurrentState()
-
-	self.sprintTrove = self.trove:Extend()
-	self.sprintTrove:Add(function()
-		self.CharacterStateController.CurrentMovementState = self.CharacterStateController.CharacterMovementState.Idle
-		self.humanoid.WalkSpeed = self:getHumanoidSpeedToSet()
-		Methods.TweenNow(
-			workspace.CurrentCamera,
-			{ FieldOfView = self.CameraController:GetFovFromMovementState() },
-			Settings.FovTweenInfo
-		)
-	end)
-
-	Methods.TweenNow(
-		workspace.CurrentCamera,
-		{ FieldOfView = self.CameraController:GetFovFromMovementState() },
-		Settings.FovTweenInfo
-	)
-
-	self:setSpeedWithStateCheck(
-		HumanoidSettings.SprintSpeed,
-		self.CharacterStateController.CharacterMovementState.Sprint
-	)
-end
-
-function CharacterMovementController:StopSprint()
-	if self.sprintTrove then
-		self.sprintTrove:Destroy()
-		self.sprintTrove = nil
-	end
-end
-
-function CharacterMovementController:StartCrawl()
-	if not self.CharacterStateController:TryChangeState(self.CharacterStateController.CharacterMovementState.Crawl) then
-		return
-	end
-
-	self:StopCurrentState()
-
-	self.crawlTrove = self.trove:Extend()
-	self.crawlTrove:Add(function()
-		self.CharacterStateController.CurrentMovementState = self.CharacterStateController.CharacterMovementState.Idle
-		self.humanoid.WalkSpeed = self:getHumanoidSpeedToSet()
-		Methods.TweenNow(
-			workspace.CurrentCamera,
-			{ FieldOfView = self.CameraController:GetFovFromMovementState() },
-			Settings.FovTweenInfo
-		)
-	end)
-
-	Methods.TweenNow(
-		workspace.CurrentCamera,
-		{ FieldOfView = self.CameraController:GetFovFromMovementState() },
-		Settings.FovTweenInfo
-	)
-
-	self:setSpeedWithStateCheck(HumanoidSettings.CrawlSpeed, self.CharacterStateController.CharacterMovementState.Crawl)
-end
-
-function CharacterMovementController:StopCrawl()
-	if self.crawlTrove then
-		self.crawlTrove:Destroy()
-		self.crawlTrove = nil
-	end
-end
-
 function CharacterMovementController:LaunchController()
 	self:Init()
+
 	self.trove = Trove.new()
+	self.trove:Connect(self.CharacterStateController.Signals.MainStateChanged, function(stateName, stateSettings)
+		self.CurrentMainStateSettings = stateSettings
+		if self.CharacterStateController.TemporaryState == nil then
+			self.humanoid.WalkSpeed = stateSettings and stateSettings.Speed or HumanoidSettings.IdleSpeed
+		else
+			local speedMultipler = self.TemporaryStateSettings and self.TemporaryStateSettings.SpeedMultipler or 1
+			self.humanoid.WalkSpeed = (stateSettings and stateSettings.Speed or HumanoidSettings.IdleSpeed)
+				* speedMultipler
+		end
+	end)
 
-	ContextActionService:BindAction("Sprint", function(_, inputState)
+	self.trove:Connect(self.CharacterStateController.Signals.TemporaryStateChanged, function(stateName, stateSettings)
+		if stateName == nil then
+			self.humanoid.WalkSpeed = self.CurrentMainStateSettings and self.CurrentMainStateSettings.Speed
+				or HumanoidSettings.IdleSpeed
+			self.TemporaryStateSettings = nil
+			return
+		end
+
+		if stateSettings and stateSettings.SpeedMultipler then
+			self.TemporaryStateSettings = stateSettings
+
+			self.humanoid.WalkSpeed = (
+				self.CurrentMainStateSettings and self.CurrentMainStateSettings.Speed or HumanoidSettings.IdleSpeed
+			) * stateSettings.SpeedMultipler
+		end
+	end)
+
+	ContextActionService:BindAction("Sprint", function(_, inputState: Enum.UserInputState)
 		if inputState == Enum.UserInputState.Begin then
-			self:StartSprint()
-		elseif inputState == Enum.UserInputState.End then
-			self:StopSprint()
+			self.CharacterStateController:SetMainStateIfPossible("Sprint")
+		elseif inputState == Enum.UserInputState.End and self.CharacterStateController.MainState == "Sprint" then
+			self.CharacterStateController:SetMainState("Default")
 		end
 
 		return Enum.ContextActionResult.Pass
-	end, false, Settings.SprintKeyCode)
+	end, false, Enum.KeyCode.LeftShift)
 
-	ContextActionService:BindAction("Crawl", function(_, inputState)
+	ContextActionService:BindAction("Crawl", function(_, inputState: Enum.UserInputState)
 		if inputState == Enum.UserInputState.Begin then
-			self:StartCrawl()
-		elseif inputState == Enum.UserInputState.End then
-			self:StopCrawl()
+			self.CharacterStateController:SetMainStateIfPossible("Crawl")
+		elseif inputState == Enum.UserInputState.End and self.CharacterStateController.MainState == "Crawl" then
+			self.CharacterStateController:SetMainState("Default")
 		end
 
 		return Enum.ContextActionResult.Pass
-	end, false, Settings.CrawlKeyCode)
+	end, false, Enum.KeyCode.C)
 end
 
 function CharacterMovementController:StopController()
@@ -159,16 +76,14 @@ function CharacterMovementController:StopController()
 	end
 end
 
-function CharacterMovementController:KnitStart() end
-
 function CharacterMovementController:KnitInit()
 	self.ClientController = Knit.GetController("ClientController")
 	self.CharacterStateController = Knit.GetController("CharacterStateController")
-	self.CameraController = Knit.GetController("CameraController")
 
 	self.ClientController.HumanoidSpawned:Connect(function()
 		self:LaunchController()
 	end)
+
 	self.ClientController.HumanoidDied:Connect(function()
 		self:StopController()
 	end)

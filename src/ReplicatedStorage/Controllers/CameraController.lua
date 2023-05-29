@@ -123,28 +123,78 @@ function CameraController:EnableMoveCameraTilt()
 	end)
 end
 
-function CameraController:GetFovFromMovementState()
-	return CameraSettings.FieldOfViews[self.CharacterStateController.CurrentMovementState.Name]
-		or CameraSettings.FieldOfViews.Idle
+function CameraController:TweenFovAndRevert(fovToSet, tweenInfo: TweenInfo?)
+	self:TweenFOV(fovToSet, tweenInfo):andThen(function()
+		self:TweenFOV(self.TemporaryFOV or self.StaticFOV, tweenInfo)
+	end)
 end
 
-function CameraController:TweenFov(fovToSet, tweenInfo: TweenInfo)
-	Methods.TweenNow(workspace.CurrentCamera, { FieldOfView = fovToSet }, tweenInfo).Promise
-		:andThenCall(
-			Methods.TweenNow,
-			workspace.CurrentCamera,
-			{ FieldOfView = self:GetFovFromMovementState() },
-			tweenInfo
-		)
+function CameraController:TweenFOV(fovValue, tweenInfo: TweenInfo?)
+	if self.fovTweenInfo then
+		self.fovTweenInfo.Tween:Pause()
+	end
+
+	local fovTweenInfo = Methods.TweenNow(
+		Camera,
+		{ FieldOfView = fovValue },
+		tweenInfo or TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	)
+
+	self.fovTweenInfo = fovTweenInfo
+
+	return fovTweenInfo.Promise:andThen(function()
+		if self.fovTweenInfo == fovTweenInfo then
+			self.fovTweenInfo = nil
+		end
+	end)
+end
+
+-- The ones that will be applied for a long time: idle, sprint, crawl
+function CameraController:SetStaticFOV(fovValue: number, tweenInfo: TweenInfo?)
+	self.StaticFOV = fovValue
+	if not self.TemporaryFOV then
+		self:TweenFOV(fovValue, tweenInfo)
+	end
+end
+
+-- // The ones that should override the satic FOVs, but they're active for short amount of time, while some statement
+-- is true. For for example: aim
+function CameraController:SetTemporaryFOV(fovValue: number, tweenInfo: TweenInfo?)
+	self.TemporaryFOV = fovValue
+	self:TweenFOV(fovValue, tweenInfo)
+end
+
+function CameraController:RemoveTemporaryFOV(tweenInfo: TweenInfo?)
+	self.TemporaryFOV = nil
+	local fovToSet = self.StaticFOV or CameraSettings.FieldOfViews.Idle
+	self:TweenFOV(fovToSet, tweenInfo)
 end
 
 function CameraController:LaunchController()
 	self:Init()
 
+	self:SetStaticFOV(CameraSettings.FieldOfViews.Idle)
 	self.trove = Trove.new()
+
 	self:EnableDefaultCameraShake()
 	self:EnableMouseCameraTilt()
 	self:EnableMoveCameraTilt()
+
+	self.trove:Connect(self.CharacterStateController.Signals.MainStateChanged, function(stateName, stateSettings)
+		self:SetStaticFOV(stateSettings and stateSettings.FieldOfView or CameraSettings.FieldOfViews.Idle)
+	end)
+
+	self.trove:Connect(self.CharacterStateController.Signals.TemporaryStateChanged, function(stateName, stateSettings)
+		if stateName == nil then
+			self:RemoveTemporaryFOV()
+		end
+
+		if not stateSettings then
+			return
+		end
+
+		self:SetTemporaryFOV(stateSettings and stateSettings.FieldOfView or CameraSettings.FieldOfViews.Idle)
+	end)
 end
 
 function CameraController:StopController()
