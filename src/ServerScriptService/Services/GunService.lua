@@ -1,13 +1,18 @@
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Common.Packages.Knit)
+local Trove = require(ReplicatedStorage.Common.Packages.Trove)
+
 local GunsSettings = require(ReplicatedStorage.Common.Settings.GunsSettings)
 local GunModule = require(ReplicatedStorage.Common.Modules.GunModule)
+local FastCast = require(ReplicatedStorage.Common.Modules.FastCastRedux)
 
 local GunService = Knit.CreateService({
 	Name = "GunService",
 	Client = {},
+	CastersInfo = {},
 })
 
 function GunService.Client:Reload(player)
@@ -42,7 +47,7 @@ function GunService.Client:Reload(player)
 	end)
 end
 
-function GunService.Client:Shot(player: Player)
+function GunService.Client:Shot(player: Player, centerRay: Ray)
 	local playerGun = self.Server:GetPlayerGun(player)
 	if not playerGun then
 		return
@@ -60,7 +65,17 @@ function GunService.Client:Shot(player: Player)
 	playerGun:SetAttribute("LastTimeFired", tick())
 	playerGun:SetAttribute("AmmoLoaded", ammoLoaded - 1)
 
-	print("Bang")
+	local casterInfo = self.Server.CastersInfo[playerGun]
+	if not casterInfo then
+		return
+	end
+
+	local hitSource, hitDirection = GunModule.GetHitRayPoints(player.Character, playerGun, centerRay)
+	if not hitSource or not hitDirection then
+		return
+	end
+
+	casterInfo.Caster:Fire(hitSource, hitDirection, 1000, casterInfo.Behavior)
 end
 
 function GunService:GetPlayerGun(player)
@@ -77,8 +92,99 @@ function GunService:GetPlayerGun(player)
 	return tool
 end
 
+function GunService:GetCasterInfo(gunInstance: Tool)
+	return self.Casters[gunInstance]
+end
+
+function GunService:GetToolOwnerPlayer(tool: Tool)
+	if not tool.Parent then
+		warn("Tool has no parent:", tool)
+		return false
+	end
+
+	local player = tool.Parent:FindFirstAncestorWhichIsA("Player")
+
+	if player then
+		return player
+	end
+
+	player = Players:GetPlayerFromCharacter(tool.Parent)
+
+	if not player then
+		warn("No player from provided character:", tool.Parent)
+		return false
+	end
+
+	return player
+end
+
+function GunService:GetToolOwnerCharacter(tool: Tool)
+	if not tool.Parent then
+		warn("Tool has no parent:", tool)
+		return false
+	end
+
+	if tool.Parent:IsA("Model") then
+		return tool.Parent
+	end
+
+	local player = tool.Parent:FindFirstAncestorWhichIsA("Player")
+
+	if not player then
+		warn("Can't get character from tool:", tool)
+		return false
+	end
+
+	return player.Character
+end
+
+function GunService:OnHit(instanceHit: Instance)
+	local damageable =
+		self.DamageableService:GetDamageable(instanceHit:FindFirstAncestorWhichIsA("Model") or instanceHit)
+
+	if not damageable then
+		return
+	end
+
+	damageable:TakeDamage(20)
+end
+
+function GunService:InitCaster(gunInstance: Tool)
+	local toolCharacter = self:GetToolOwnerCharacter(gunInstance)
+	if not toolCharacter then
+		return
+	end
+
+	if self.CastersInfo[gunInstance] then
+		self.CastersInfo[gunInstance].Trove:Destroy()
+	end
+
+	local casterInfo = {
+		Caster = FastCast.new(),
+		Behavior = FastCast.newBehavior(),
+		Trove = Trove.new(),
+	}
+
+	casterInfo.Caster.RayHit:Connect(function(_, raycastResult)
+		if not raycastResult or not raycastResult.Instance then
+			return
+		end
+
+		self:OnHit(raycastResult.Instance)
+	end)
+
+	casterInfo.Behavior.RaycastParams = GunModule.CreateDefaultRaycastParams({ toolCharacter })
+	casterInfo.Behavior.Acceleration = GunsSettings.General.Acceleration
+
+	self.CastersInfo[gunInstance] = casterInfo
+
+	return casterInfo
+end
+
 function GunService:InitGun(gunInstance: Tool)
-	gunInstance.Equipped:Connect(function()
+	local gunTrove = Trove.new()
+	gunTrove:AttachToInstance(gunInstance)
+	gunTrove:Connect(gunInstance.Equipped, function()
 		local character = gunInstance:FindFirstAncestorWhichIsA("Model")
 		if not character then
 			return
@@ -103,6 +209,10 @@ function GunService:InitGun(gunInstance: Tool)
 	gunInstance:SetAttribute("ClipSize", gunSettings.Stats.ClipSize)
 	gunInstance:SetAttribute("ReloadTime", gunSettings.Stats.ReloadTime)
 
+	if not self:InitCaster(gunInstance) then
+		return false
+	end
+
 	return true
 end
 
@@ -118,6 +228,7 @@ end
 
 function GunService:KnitInit()
 	self.SoundService = Knit.GetService("SoundService")
+	self.DamageableService = Knit.GetService("DamageableService")
 end
 
 return GunService

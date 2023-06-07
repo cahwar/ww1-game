@@ -56,7 +56,7 @@ function GunModule.CreateDefaultRaycastParams(ignoreTable)
 	return raycastParams
 end
 
-function GunModule.GetHitRaycastResult(character, gun: Tool, centerRay: Ray)
+function GunModule.GetHitRayPoints(character, gun: Tool, centerRay: Ray)
 	local fromCameraOrigin = centerRay.Origin
 	local fromCameraDirection = centerRay.Direction
 
@@ -75,6 +75,16 @@ function GunModule.GetHitRaycastResult(character, gun: Tool, centerRay: Ray)
 		hitDirection = (fromCameraRaycastResult.Position - hitSource).Unit
 	else
 		hitDirection = fromCameraDirection
+	end
+
+	return hitSource, hitDirection
+end
+
+function GunModule.GetHitRaycastResult(character, gun: Tool, centerRay: Ray)
+	local hitSource, hitDirection = GunModule.GetHitRayPoints(character, gun, centerRay)
+
+	if not hitSource or not hitDirection then
+		return
 	end
 
 	local raycastResult =

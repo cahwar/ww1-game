@@ -1,5 +1,6 @@
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
+local LocalizationService = game:GetService("LocalizationService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -113,6 +114,18 @@ function GunClient:OnDestroy()
 	self.trove:Destroy()
 end
 
+function GunClient:GetViewportCenterWithoutInset()
+	local viewportSize = workspace.CurrentCamera.ViewportSize
+	local viewportCenter = Vector2.new(viewportSize.X - (viewportSize.X / 2), viewportSize.Y - (viewportSize.Y / 2))
+	local viewportCenterWihoutInset = Vector2.new(viewportCenter.X, viewportCenter.Y - GuiService:GetGuiInset().Y)
+	return viewportCenterWihoutInset
+end
+
+function GunClient:GetScreenCenterRay()
+	local viewportCenterWihoutInset = self:GetViewportCenterWithoutInset()
+	return workspace.CurrentCamera:ScreenPointToRay(viewportCenterWihoutInset.X, viewportCenterWihoutInset.Y)
+end
+
 function GunClient:StartDisplayingHitPoint()
 	self.hitPointTrove = self.sessionTrove:Extend()
 	self.hitPointTrove:Add(function()
@@ -120,15 +133,9 @@ function GunClient:StartDisplayingHitPoint()
 	end)
 
 	self.hitPointTrove:Connect(RunService.Heartbeat, function()
-		local viewportSize = workspace.CurrentCamera.ViewportSize
-		local viewportCenter = Vector2.new(viewportSize.X - (viewportSize.X / 2), viewportSize.Y - (viewportSize.Y / 2))
-		local viewportCenterWihoutInset = Vector2.new(viewportCenter.X, viewportCenter.Y - GuiService:GetGuiInset().Y)
+		local viewportCenterWihoutInset = self:GetViewportCenterWithoutInset()
 
-		local raycastResult = GunModule.GetHitRaycastResult(
-			self.character,
-			self.Instance,
-			workspace.CurrentCamera:ScreenPointToRay(viewportCenterWihoutInset.X, viewportCenterWihoutInset.Y)
-		)
+		local raycastResult = GunModule.GetHitRaycastResult(self.character, self.Instance, self:GetScreenCenterRay())
 
 		if not raycastResult then
 			if self.hitPointMarker.Visible then
@@ -361,7 +368,7 @@ function GunClient:Shot()
 		shotAnimationName = self.gunSettings.Animations.NoAimShot
 	end
 
-	GunService:Shot()
+	GunService:Shot(self:GetScreenCenterRay())
 
 	Sounds:PlaySoundOnce(self.gunSettings.Sounds.Shot, Sounds.CreateSoundPart(self.character.HumanoidRootPart.Position))
 	Animations:PlayAnimation(self.character, shotAnimationName, 0, nil)

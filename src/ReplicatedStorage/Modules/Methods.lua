@@ -41,7 +41,11 @@ function Methods.Approximately(value1, value2, range: number?)
 
 	if typeof(value1) == "number" then
 		return math.abs(value2 - value1) <= range
+	elseif typeof(value1) == "Vector3" then
+		return (value2 - value1).Magnitude <= range
 	end
+
+	return false
 end
 
 return Methods

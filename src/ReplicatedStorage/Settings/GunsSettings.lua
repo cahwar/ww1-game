@@ -6,6 +6,7 @@ local GunsSettings = {}
 
 GunsSettings.General = {
 	DisplayHitPoint = true,
+	Acceleration = Vector3.new(0, -5, 0),
 }
 
 GunsSettings.FireRates = EnumList.new("FireRates", {
