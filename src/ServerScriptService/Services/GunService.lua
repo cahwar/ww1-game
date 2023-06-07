@@ -11,7 +11,9 @@ local FastCast = require(ReplicatedStorage.Common.Modules.FastCastRedux)
 
 local GunService = Knit.CreateService({
 	Name = "GunService",
-	Client = {},
+	Client = {
+		DrawShotCast = Knit.CreateSignal(),
+	},
 	CastersInfo = {},
 })
 
@@ -76,6 +78,7 @@ function GunService.Client:Shot(player: Player, centerRay: Ray)
 	end
 
 	casterInfo.Caster:Fire(hitSource, hitDirection, 1000, casterInfo.Behavior)
+	self.DrawShotCast:FireAll(playerGun, hitSource, hitDirection, 1000, GunsSettings.General.Acceleration)
 end
 
 function GunService:GetPlayerGun(player)
@@ -96,48 +99,6 @@ function GunService:GetCasterInfo(gunInstance: Tool)
 	return self.Casters[gunInstance]
 end
 
-function GunService:GetToolOwnerPlayer(tool: Tool)
-	if not tool.Parent then
-		warn("Tool has no parent:", tool)
-		return false
-	end
-
-	local player = tool.Parent:FindFirstAncestorWhichIsA("Player")
-
-	if player then
-		return player
-	end
-
-	player = Players:GetPlayerFromCharacter(tool.Parent)
-
-	if not player then
-		warn("No player from provided character:", tool.Parent)
-		return false
-	end
-
-	return player
-end
-
-function GunService:GetToolOwnerCharacter(tool: Tool)
-	if not tool.Parent then
-		warn("Tool has no parent:", tool)
-		return false
-	end
-
-	if tool.Parent:IsA("Model") then
-		return tool.Parent
-	end
-
-	local player = tool.Parent:FindFirstAncestorWhichIsA("Player")
-
-	if not player then
-		warn("Can't get character from tool:", tool)
-		return false
-	end
-
-	return player.Character
-end
-
 function GunService:OnHit(instanceHit: Instance)
 	local damageable =
 		self.DamageableService:GetDamageable(instanceHit:FindFirstAncestorWhichIsA("Model") or instanceHit)
@@ -146,11 +107,11 @@ function GunService:OnHit(instanceHit: Instance)
 		return
 	end
 
-	damageable:TakeDamage(20)
+	damageable:TakeDamage(20, instanceHit)
 end
 
 function GunService:InitCaster(gunInstance: Tool)
-	local toolCharacter = self:GetToolOwnerCharacter(gunInstance)
+	local toolCharacter = GunModule.GetToolOwnerCharacter(gunInstance)
 	if not toolCharacter then
 		return
 	end

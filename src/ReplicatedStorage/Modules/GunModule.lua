@@ -1,3 +1,4 @@
+local Players = game:GetService("Players")
 local GunModule = {}
 
 function GunModule.AttachGunToCharacter(character, gun: Tool)
@@ -63,7 +64,7 @@ function GunModule.GetHitRayPoints(character, gun: Tool, centerRay: Ray)
 	local fromCameraRaycastResult =
 		GunModule._getFromCameraRaycastResult(fromCameraOrigin, fromCameraDirection, character, { character })
 
-	local gunPart = gun:FindFirstChildWhichIsA("BasePart", true)
+	local gunPart = gun:FindFirstChild("Muzzle", true) or gun:FindFirstChildWhichIsA("BasePart", true)
 	if not gunPart then
 		return
 	end
@@ -91,6 +92,48 @@ function GunModule.GetHitRaycastResult(character, gun: Tool, centerRay: Ray)
 		workspace:Raycast(hitSource, hitDirection * 1000, GunModule.CreateDefaultRaycastParams({ character }))
 
 	return raycastResult
+end
+
+function GunModule.GetToolOwnerPlayer(tool: Tool)
+	if not tool.Parent then
+		warn("Tool has no parent:", tool)
+		return false
+	end
+
+	local player = tool.Parent:FindFirstAncestorWhichIsA("Player")
+
+	if player then
+		return player
+	end
+
+	player = Players:GetPlayerFromCharacter(tool.Parent)
+
+	if not player then
+		warn("No player from provided character:", tool.Parent)
+		return false
+	end
+
+	return player
+end
+
+function GunModule.GetToolOwnerCharacter(tool: Tool)
+	if not tool.Parent then
+		warn("Tool has no parent:", tool)
+		return false
+	end
+
+	if tool.Parent:IsA("Model") then
+		return tool.Parent
+	end
+
+	local player = tool.Parent:FindFirstAncestorWhichIsA("Player")
+
+	if not player then
+		warn("Can't get character from tool:", tool)
+		return false
+	end
+
+	return player.Character
 end
 
 return GunModule

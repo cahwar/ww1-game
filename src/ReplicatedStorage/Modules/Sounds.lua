@@ -37,17 +37,11 @@ function Sounds:basePlaySound(soundReference: Sound | string, soundParent: Insta
 end
 
 function Sounds.CreateSoundPart(worldPosition: Vector3)
-	local part = Instance.new("Part")
+	local part = Methods.CreateTemporaryPart(worldPosition)
+	part.Parent = SoundParts
 	part.ChildRemoved:Once(function()
 		part:Destroy()
 	end)
-	part.Position = worldPosition
-	part.Size = Vector3.new(0.1, 0.1, 0.1)
-	part.Anchored = true
-	part.CanCollide = false
-	part.CanQuery = false
-	part.Transparency = 1
-	part.Parent = SoundParts
 	return part
 end
 

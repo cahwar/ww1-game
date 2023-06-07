@@ -71,7 +71,7 @@ function CharacterLookFollower:Enable()
 
 		self.offset = self.offset and Methods.LerpValue(self.offset, offset, 0.1) or offset
 
-		self.xRotationToAdd = math.clamp(-cameraX, math.rad(-50), math.rad(75)) + self.offset
+		self.xRotationToAdd = math.clamp(-cameraX, math.rad(-70), math.rad(75)) + self.offset
 		waist.C1 = CFrame.new(waistC1.Position) * CFrame.Angles(self.xRotationToAdd, waistY, waistZ)
 	end)
 end

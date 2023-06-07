@@ -1,3 +1,4 @@
+local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
@@ -46,6 +47,93 @@ function Methods.Approximately(value1, value2, range: number?)
 	end
 
 	return false
+end
+
+function Methods.CreateTemporaryPart(worldPosition: Vector3)
+	local part = Instance.new("Part")
+	part.Position = worldPosition
+	part.Size = Vector3.new(0.1, 0.1, 0.1)
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanQuery = false
+	part.Transparency = 1
+	return part
+end
+
+function Methods.spawnParticles(particlesReference, particlesParent: BasePart)
+	if typeof(particlesReference) == "string" then
+		particlesReference = ReplicatedStorage.Common.GameParts.Particles:FindFirstChild(particlesReference, true)
+	end
+
+	if particlesReference and particlesReference:IsA("BasePart") then
+		particlesReference = particlesReference:FindFirstChildWhichIsA("Attachment")
+			or particlesReference:FindFirstChildWhichIsA("ParticleEmitter")
+	end
+
+	if not particlesReference then
+		return
+	end
+
+	particlesReference = particlesReference:Clone()
+	particlesReference.Parent = particlesParent
+
+	return particlesReference
+end
+
+function Methods.EmitParticlesOnce(particlesReference, particlesParent: BasePart, emitAmount: number)
+	local particles = Methods.spawnParticles(particlesReference, particlesParent)
+
+	if not particles then
+		return
+	end
+
+	if particles:IsA("ParticleEmitter") then
+		particles:Emit(emitAmount)
+	else
+		for _, v in particles:GetDescendants() do
+			if v:IsA("ParticleEmitter") then
+				v:Emit(emitAmount)
+			end
+		end
+	end
+
+	Debris:AddItem(particles, 5)
+end
+
+function Methods.EnableParticlesEmition(particlesReference, particlesParent: BasePart, duration: number?)
+	local particles = Methods.spawnParticles(particlesReference, particlesParent)
+
+	if not particles then
+		return
+	end
+
+	if particles:IsA("ParticleEmitter") then
+		particles.Enabled = true
+	else
+		for _, v in particles:GetDescendants() do
+			if v:IsA("ParticleEmitter") then
+				v.Enabled = true
+			end
+		end
+	end
+
+	if duration then
+		task.delay(duration, Methods.StopParticlesEmition, particles)
+	end
+
+	return particles
+end
+
+function Methods.StopParticlesEmition(particles: Attachment | ParticleEmitter)
+	if particles:IsA("ParticleEmitter") then
+		particles.Enabled = false
+	else
+		for _, v in particles:GetDescendants() do
+			if v:IsA("ParticleEmitter") then
+				v.Enabled = false
+			end
+		end
+	end
 end
 
 return Methods
