@@ -5,15 +5,17 @@ local RunService = game:GetService("RunService")
 local Trove = require(ReplicatedStorage.Common.Packages.Trove)
 local Knit = require(ReplicatedStorage.Common.Packages.Knit)
 local Timer = require(ReplicatedStorage.Common.Packages.Timer)
+local Methods = require(ReplicatedStorage.Common.Modules.Methods)
 
 local Camera = workspace.CurrentCamera
 local Player = Players.LocalPlayer
-local Mouse = Player:GetMouse()
 
 local CharacterAnimationService
+local CharacterStateController
 
 Knit.OnStart():andThen(function()
 	CharacterAnimationService = Knit.GetService("CharacterAnimationService")
+	CharacterStateController = Knit.GetController("CharacterStateController")
 end)
 
 local Settings = {
@@ -27,6 +29,7 @@ CharacterLookFollower.__index = CharacterLookFollower
 function CharacterLookFollower.new()
 	local self = setmetatable({
 		character = Player.Character or Player.CharacterAdded:Wait(),
+		offset = 0,
 	}, CharacterLookFollower)
 	return self
 end
@@ -60,7 +63,15 @@ function CharacterLookFollower:Enable()
 		local cameraX, _, _ = Camera.CFrame:ToOrientation()
 		local waistC1 = waist.C1
 		local _, waistY, waistZ = waistC1:ToOrientation()
-		self.xRotationToAdd = math.clamp(-cameraX, -45, 55)
+
+		local offset = 0
+		if CharacterStateController.MainState == "Crawl" then
+			offset += math.rad(-20)
+		end
+
+		self.offset = self.offset and Methods.LerpValue(self.offset, offset, 0.1) or offset
+
+		self.xRotationToAdd = math.clamp(-cameraX, math.rad(-50), math.rad(75)) + self.offset
 		waist.C1 = CFrame.new(waistC1.Position) * CFrame.Angles(self.xRotationToAdd, waistY, waistZ)
 	end)
 end

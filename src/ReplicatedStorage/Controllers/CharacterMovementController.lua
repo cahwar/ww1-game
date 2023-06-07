@@ -79,6 +79,12 @@ function CharacterMovementController:LaunchController()
 
 		return Enum.ContextActionResult.Pass
 	end, false, Enum.KeyCode.C)
+
+	self.trove:Add(function()
+		ContextActionService:UnbindAction("ToggleCrawl")
+		ContextActionService:UnbindAction("HoldCrawl")
+		ContextActionService:UnbindAction("Sprint")
+	end)
 end
 
 function CharacterMovementController:StopController()

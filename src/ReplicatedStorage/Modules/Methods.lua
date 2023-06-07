@@ -36,4 +36,12 @@ function Methods.TweenNow(tweenObject, tweenPoint, tweenInfo)
 	return tweenTable
 end
 
+function Methods.Approximately(value1, value2, range: number?)
+	assert(typeof(value1) == typeof(value2), "Values have different types")
+
+	if typeof(value1) == "number" then
+		return math.abs(value2 - value1) <= range
+	end
+end
+
 return Methods

@@ -75,11 +75,18 @@ function Animations:PlayAnimation(
 	target: Instance,
 	animationIndex: Animation | string,
 	fadeTime: number?,
-	playbackSpeed: number?
+	playbackSpeed: number?,
+	eventsHandlers: { [string]: () -> nil }?
 )
 	local animationInfo = self:GetAnimationInfo(target, animationIndex)
 	if not animationInfo then
 		return
+	end
+
+	if eventsHandlers then
+		for event, handler in eventsHandlers do
+			animationInfo.Track:GetMarkerReachedSignal(event):Once(handler)
+		end
 	end
 
 	animationInfo.Track:Play(fadeTime)

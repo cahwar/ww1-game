@@ -12,7 +12,7 @@ local Sounds = {
 	SoundsPlaying = {},
 }
 
-function Sounds:basePlaySound(soundReference: Sound | string, soundParent: Instance)
+function Sounds:basePlaySound(soundReference: Sound | string, soundParent: Instance, soundSpeed: number?)
 	local sound
 
 	if typeof(soundReference) == "string" then
@@ -26,6 +26,9 @@ function Sounds:basePlaySound(soundReference: Sound | string, soundParent: Insta
 		return
 	end
 
+	if soundSpeed then
+		sound.PlaybackSpeed = soundSpeed
+	end
 	sound = sound:Clone()
 	sound.Parent = soundParent
 	sound:Play()
@@ -42,20 +45,27 @@ function Sounds.CreateSoundPart(worldPosition: Vector3)
 	part.Size = Vector3.new(0.1, 0.1, 0.1)
 	part.Anchored = true
 	part.CanCollide = false
+	part.CanQuery = false
 	part.Transparency = 1
 	part.Parent = SoundParts
 	return part
 end
 
-function Sounds:PlaySoundOnce(soundReference: Sound | string, soundParent: Instance)
-	local sound = self:basePlaySound(soundReference, soundParent)
+function Sounds:PlaySoundOnce(soundReference: Sound | string, soundParent: Instance, soundSpeed: number?)
+	local sound = self:basePlaySound(soundReference, soundParent, soundSpeed)
+
 	sound.Ended:Once(function()
 		sound:Destroy()
 	end)
 end
 
-function Sounds:PlaySoundLooped(soundReference: Sound | string, soundParent: Instance, soundTableName: string)
-	local sound = self:basePlaySound(soundReference, soundParent)
+function Sounds:PlaySoundLooped(
+	soundReference: Sound | string,
+	soundParent: Instance,
+	soundTableName: string,
+	soundSpeed: number?
+)
+	local sound = self:basePlaySound(soundReference, soundParent, soundSpeed)
 	self.SoundsPlaying[soundTableName] = sound
 end
 

@@ -1,8 +1,9 @@
 local ConflictingCharacterStates = {
-	Sprint = { "Aim", "Crawl", "Shot" },
+	Sprint = { "Aim", "Crawl", "Shot", "Reload" },
 	Crawl = { "Sprint" },
-	Aim = { "Sprint" },
-	Shot = { "Sprint" },
+	Aim = { "Sprint", "Reload" },
+	Shot = { "Sprint", "Reload" },
+	Reload = { "Sprint", "Aim", "Shot" },
 }
 
 return ConflictingCharacterStates

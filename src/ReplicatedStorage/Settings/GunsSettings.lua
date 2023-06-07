@@ -4,6 +4,10 @@ local EnumList = require(ReplicatedStorage.Common.Packages.EnumList)
 
 local GunsSettings = {}
 
+GunsSettings.General = {
+	DisplayHitPoint = true,
+}
+
 GunsSettings.FireRates = EnumList.new("FireRates", {
 	"Semi",
 	"Auto",
@@ -16,12 +20,16 @@ GunsSettings.Guns = {
 			Aim = "RifleAim",
 			AimShot = "RifleAimShot",
 			NoAimShot = "RifleNoAimShot",
-			BetweenShotReload = "RifleBetweenShotReload",
+			RackGun = "RifleBetweenShotReload",
+			Reload = "RifleReload",
 		},
 
 		Sounds = {
+			Reload = nil,
 			Shot = "GunShot_2",
+			EmptyClick = "EmptyClick_1",
 			BetweenShotReload = nil,
+			GeneralReload = "RifleReload",
 		},
 
 		Effects = {
@@ -32,8 +40,6 @@ GunsSettings.Guns = {
 			GunsSettings.FireRates.Semi,
 			GunsSettings.FireRates.Auto,
 		},
-
-		ShotCooldown = 0.2,
 
 		NoAimShakeCalculations = {
 			SinHeight = 45,
@@ -47,6 +53,14 @@ GunsSettings.Guns = {
 			CosSpeed = 32,
 			SinHeight = 19,
 			CosHeight = 5.5,
+		},
+
+		Stats = {
+			ShotDamage = 10,
+			ClipsStorage = 5,
+			ShotCooldown = 0.2,
+			ClipSize = 10,
+			ReloadTime = 4,
 		},
 	},
 }
