@@ -7,6 +7,16 @@ local Methods = require(ReplicatedStorage.Common.Modules.Methods)
 local HumanoidDamageable = setmetatable({}, Damageable)
 HumanoidDamageable.__index = HumanoidDamageable
 
+local DamageMultiplers = {
+	Head = 2,
+	UpperTorso = 1.1,
+	LowerTorso = 1.3,
+	RightFoot = 0.4,
+	LeftFoot = 0.4,
+	RightHand = 0.5,
+	LeftHand = 0.5,
+}
+
 function HumanoidDamageable.new(instance: Instance)
 	local self = setmetatable(Damageable.new(instance), HumanoidDamageable)
 
@@ -20,7 +30,9 @@ function HumanoidDamageable:TakeDamage(damage: number, damagedPart: BasePart?)
 		return
 	end
 
-	self.Humanoid:TakeDamage(damage)
+	local damageMultipler = damagedPart and DamageMultiplers[damagedPart.Name] or 1
+
+	self.Humanoid:TakeDamage(damage * damageMultipler)
 
 	Methods.EmitParticlesOnce(
 		"BloodFog",

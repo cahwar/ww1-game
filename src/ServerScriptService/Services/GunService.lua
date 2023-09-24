@@ -99,7 +99,7 @@ function GunService:GetCasterInfo(gunInstance: Tool)
 	return self.Casters[gunInstance]
 end
 
-function GunService:OnHit(instanceHit: Instance)
+function GunService:OnHit(instanceHit: Instance, gunInstance: Tool)
 	local damageable =
 		self.DamageableService:GetDamageable(instanceHit:FindFirstAncestorWhichIsA("Model") or instanceHit)
 
@@ -107,7 +107,7 @@ function GunService:OnHit(instanceHit: Instance)
 		return
 	end
 
-	damageable:TakeDamage(20, instanceHit)
+	damageable:TakeDamage(gunInstance:GetAttribute("ShotDamage") or 0, instanceHit)
 end
 
 function GunService:InitCaster(gunInstance: Tool)
@@ -131,7 +131,7 @@ function GunService:InitCaster(gunInstance: Tool)
 			return
 		end
 
-		self:OnHit(raycastResult.Instance)
+		self:OnHit(raycastResult.Instance, gunInstance)
 	end)
 
 	casterInfo.Behavior.RaycastParams = GunModule.CreateDefaultRaycastParams({ toolCharacter })
@@ -169,6 +169,7 @@ function GunService:InitGun(gunInstance: Tool)
 	gunInstance:SetAttribute("AmmoLoaded", gunSettings.Stats.ClipSize)
 	gunInstance:SetAttribute("ClipSize", gunSettings.Stats.ClipSize)
 	gunInstance:SetAttribute("ReloadTime", gunSettings.Stats.ReloadTime)
+	gunInstance:SetAttribute("ShotDamage", gunSettings.Stats.ShotDamage)
 
 	if not self:InitCaster(gunInstance) then
 		return false

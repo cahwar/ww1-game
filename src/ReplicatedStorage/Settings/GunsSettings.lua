@@ -43,7 +43,7 @@ GunsSettings.Guns = {
 		},
 
 		NoAimShakeCalculations = {
-			SinHeight = 45,
+			SinHeight = 20,
 			CosHeight = 3,
 			CosSpeed = 5,
 			SinSpeed = 35,
@@ -52,7 +52,7 @@ GunsSettings.Guns = {
 		AimShakeCalculations = {
 			SinSpeed = 36,
 			CosSpeed = 32,
-			SinHeight = 19,
+			SinHeight = 15,
 			CosHeight = 5.5,
 		},
 

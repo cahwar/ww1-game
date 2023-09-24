@@ -1,6 +1,5 @@
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
-local LocalizationService = game:GetService("LocalizationService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

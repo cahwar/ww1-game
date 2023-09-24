@@ -1,4 +1,5 @@
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Common.Packages.Knit)
@@ -7,17 +8,29 @@ local Trove = require(ReplicatedStorage.Common.Packages.Trove)
 local GunsSettings = require(ReplicatedStorage.Common.Settings.GunsSettings)
 local GameParts = ReplicatedStorage.Common.GameParts
 
+local Sounds = require(ReplicatedStorage.Common.Modules.Sounds)
 local GunModule = require(ReplicatedStorage.Common.Modules.GunModule)
 local FastCast = require(ReplicatedStorage.Common.Modules.FastCastRedux)
+
+local Player = Players.LocalPlayer
 
 local GunEffectsFolder = Instance.new("Folder")
 GunEffectsFolder.Name = "GunEffects"
 GunEffectsFolder.Parent = workspace
 
+local Settings = {
+	WhizzRequiredTravelDistance = 17,
+	WhizMaxCastToHeadDistance = 17,
+}
+
 local GunController = Knit.CreateController({
 	Name = "GunController",
 	CastersInfo = {},
 })
+
+function GunController:Init()
+	self.character = Player.Character or Player.CharacterAdded:Wait()
+end
 
 function GunController:ApplyShotEffects(gunInstance: Instance, gunSettings)
 	local gunEffects = GameParts:FindFirstChild(gunSettings.Effects.Shot, true)
@@ -65,6 +78,44 @@ function GunController:OnGunShot(character: Model)
 	self:ApplyShotEffects(gunInstance, gunSettings)
 end
 
+function GunController:MoveCasterBullet(bullet, length, lastPoint, direction)
+	if not bullet then
+		return
+	end
+
+	if not bullet.Trail.Enabled then
+		bullet.Trail.Enabled = true
+	end
+
+	local bulletLength = bullet.Size.Z / 2
+	local offset = CFrame.new(0, 0, -(length - bulletLength))
+
+	bullet.CFrame = CFrame.lookAt(lastPoint, lastPoint + direction):ToWorldSpace(offset)
+end
+
+function GunController:TryApplyGunWhizz(lastPoint, activeCast, bullet)
+	if (self.character.Head.Position - lastPoint).Magnitude > Settings.WhizMaxCastToHeadDistance then
+		return
+	end
+
+	if activeCast.StateInfo.DistanceCovered < Settings.WhizzRequiredTravelDistance then
+		return
+	end
+
+	if bullet:GetAttribute("Whizzed") then
+		return
+	end
+
+	bullet:SetAttribute("Whizzed", true)
+
+	local whizzSounds = ReplicatedStorage.Common.GameParts.Sounds.Weapon.BulletWhizzes:GetChildren()
+	local randomWhizz = whizzSounds[math.random(#whizzSounds)]
+
+	if randomWhizz then
+		Sounds:PlaySoundOnce(randomWhizz, Sounds.CreateSoundPart(activeCast:GetPosition()))
+	end
+end
+
 function GunController:InitCaster(gunInstance: Tool)
 	local toolCharacter = GunModule.GetToolOwnerCharacter(gunInstance)
 	if not toolCharacter then
@@ -98,18 +149,9 @@ function GunController:InitCaster(gunInstance: Tool)
 		end
 	end)
 
-	casterInfo.Caster.LengthChanged:Connect(function(_, lastPoint, direction, length, _, bullet)
-		if not bullet then
-			return
-		end
-
-		if not bullet.Trail.Enabled then
-			bullet.Trail.Enabled = true
-		end
-
-		local bulletLength = bullet.Size.Z / 2
-		local offset = CFrame.new(0, 0, -(length - bulletLength))
-		bullet.CFrame = CFrame.lookAt(lastPoint, lastPoint + direction):ToWorldSpace(offset)
+	casterInfo.Caster.LengthChanged:Connect(function(activeCast, lastPoint, direction, length, _, bullet)
+		self:MoveCasterBullet(bullet, length, lastPoint, direction)
+		self:TryApplyGunWhizz(lastPoint, activeCast, bullet)
 	end)
 
 	self.CastersInfo[gunInstance] = casterInfo
@@ -158,6 +200,10 @@ end
 
 function GunController:KnitInit()
 	self.GunService = Knit.GetService("GunService")
+	self.ClientController = Knit.GetController("ClientController")
+	self.ClientController.HumanoidSpawned:Connect(function()
+		self:Init()
+	end)
 end
 
 return GunController
